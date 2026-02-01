@@ -1,0 +1,218 @@
+// Próspera Tax Payment Portal - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER & RESIDENCY
+// ============================================================================
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  residentId        String?  @unique @map("resident_id") // Próspera Resident ID
+  firstName         String   @map("first_name")
+  lastName          String   @map("last_name")
+  middleName        String?  @map("middle_name")
+  dateOfBirth       DateTime? @map("date_of_birth")
+  nationality       String?
+  passportNumber    String?  @map("passport_number")
+  phone             String?
+
+  // Address
+  addressLine1      String?  @map("address_line_1")
+  addressLine2      String?  @map("address_line_2")
+  city              String?
+  state             String?
+  country           String?
+  postalCode        String?  @map("postal_code")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  incomeTaxReturns  IncomeTaxReturn[]
+  vatReturns        VatReturn[]
+
+  @@map("users")
+}
+
+// ============================================================================
+// INCOME TAX RETURN (Annual - Form 1)
+// ============================================================================
+
+model IncomeTaxReturn {
+  id                    String   @id @default(cuid())
+  userId                String   @map("user_id")
+  user                  User     @relation(fields: [userId], references: [id])
+
+  // Tax Period
+  taxYear               Int      @map("tax_year")
+
+  // Status
+  status                TaxReturnStatus @default(DRAFT)
+  submittedAt           DateTime?       @map("submitted_at")
+
+  // Income Information
+  grossIncome           Decimal  @map("gross_income") @db.Decimal(15, 2)
+  presumedIncome        Decimal  @map("presumed_income") @db.Decimal(15, 2) // 50% of gross
+  taxableIncome         Decimal  @map("taxable_income") @db.Decimal(15, 2)
+
+  // Tax Calculation (10% of presumed income = 5% effective)
+  taxRate               Decimal  @map("tax_rate") @db.Decimal(5, 4) @default(0.10)
+  taxOwed               Decimal  @map("tax_owed") @db.Decimal(15, 2)
+
+  // Credits & Adjustments
+  entityTaxCredits      Decimal  @map("entity_tax_credits") @db.Decimal(15, 2) @default(0)
+  otherCredits          Decimal  @map("other_credits") @db.Decimal(15, 2) @default(0)
+  penalties             Decimal  @db.Decimal(15, 2) @default(0)
+  interest              Decimal  @db.Decimal(15, 2) @default(0)
+
+  // Final Amount
+  totalDue              Decimal  @map("total_due") @db.Decimal(15, 2)
+
+  // Income Sources (JSON for flexibility)
+  incomeSources         Json?    @map("income_sources")
+
+  // Signature
+  signatureData         String?  @map("signature_data") // Base64 encoded signature
+  signedAt              DateTime? @map("signed_at")
+  certificationAccepted Boolean  @default(false) @map("certification_accepted")
+
+  // Tax Preparer (optional)
+  preparerName          String?  @map("preparer_name")
+  preparerEmail         String?  @map("preparer_email")
+  preparerPhone         String?  @map("preparer_phone")
+
+  // Timestamps
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  // Payment
+  payment               Payment?
+
+  @@unique([userId, taxYear])
+  @@map("income_tax_returns")
+}
+
+// ============================================================================
+// VAT RETURN (Quarterly)
+// ============================================================================
+
+model VatReturn {
+  id                    String   @id @default(cuid())
+  userId                String   @map("user_id")
+  user                  User     @relation(fields: [userId], references: [id])
+
+  // Tax Period
+  taxYear               Int      @map("tax_year")
+  quarter               Int      // 1, 2, 3, or 4
+  periodStart           DateTime @map("period_start")
+  periodEnd             DateTime @map("period_end")
+
+  // Status
+  status                TaxReturnStatus @default(DRAFT)
+  submittedAt           DateTime?       @map("submitted_at")
+
+  // Sales Information
+  totalRetailSales      Decimal  @map("total_retail_sales") @db.Decimal(15, 2)
+  valueAdded            Decimal  @map("value_added") @db.Decimal(15, 2) // 50% of retail sales
+
+  // Tax Calculation (5% of value added = 2.5% effective)
+  vatRate               Decimal  @map("vat_rate") @db.Decimal(5, 4) @default(0.05)
+  vatOwed               Decimal  @map("vat_owed") @db.Decimal(15, 2)
+
+  // Adjustments
+  previousCredits       Decimal  @map("previous_credits") @db.Decimal(15, 2) @default(0)
+  penalties             Decimal  @db.Decimal(15, 2) @default(0)
+  interest              Decimal  @db.Decimal(15, 2) @default(0)
+
+  // Final Amount
+  totalDue              Decimal  @map("total_due") @db.Decimal(15, 2)
+
+  // Sales Breakdown (JSON for flexibility)
+  salesBreakdown        Json?    @map("sales_breakdown")
+
+  // Signature
+  signatureData         String?  @map("signature_data")
+  signedAt              DateTime? @map("signed_at")
+  certificationAccepted Boolean  @default(false) @map("certification_accepted")
+
+  // Timestamps
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  // Payment
+  payment               Payment?
+
+  @@unique([userId, taxYear, quarter])
+  @@map("vat_returns")
+}
+
+// ============================================================================
+// PAYMENTS
+// ============================================================================
+
+model Payment {
+  id                    String   @id @default(cuid())
+
+  // Link to tax return (one of these will be set)
+  incomeTaxReturnId     String?  @unique @map("income_tax_return_id")
+  incomeTaxReturn       IncomeTaxReturn? @relation(fields: [incomeTaxReturnId], references: [id])
+
+  vatReturnId           String?  @unique @map("vat_return_id")
+  vatReturn             VatReturn? @relation(fields: [vatReturnId], references: [id])
+
+  // Payment Details
+  amount                Decimal  @db.Decimal(15, 2)
+  currency              String   @default("USD")
+  paymentMethod         PaymentMethod @map("payment_method")
+
+  // Status
+  status                PaymentStatus @default(PENDING)
+
+  // External Reference
+  externalId            String?  @map("external_id")
+  transactionHash       String?  @map("transaction_hash") // For crypto payments
+
+  // Timestamps
+  paidAt                DateTime? @map("paid_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("payments")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum TaxReturnStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  AMENDED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  CRYPTOCURRENCY
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
