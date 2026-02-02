@@ -1,3 +1,7 @@
+/**
+ * Third-party library type declarations
+ */
+
 declare module "signature_pad" {
   export default class SignaturePad {
     constructor(canvas: HTMLCanvasElement, options?: SignaturePadOptions);

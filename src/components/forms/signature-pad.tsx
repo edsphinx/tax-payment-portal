@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import SignaturePadLib from "signature_pad";
 import { Button } from "@/components/ui/button";
 
@@ -13,6 +13,18 @@ export function SignaturePad({ onSave, value }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signaturePadRef = useRef<SignaturePadLib | null>(null);
   const [isEmpty, setIsEmpty] = useState(true);
+
+  // Use refs to avoid stale closures in event listeners
+  const onSaveRef = useRef(onSave);
+  const valueRef = useRef(value);
+
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -31,13 +43,13 @@ export function SignaturePad({ onSave, value }: SignaturePadProps) {
       signaturePadRef.current.addEventListener("endStroke", () => {
         setIsEmpty(signaturePadRef.current?.isEmpty() ?? true);
         if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
-          onSave(signaturePadRef.current.toDataURL());
+          onSaveRef.current(signaturePadRef.current.toDataURL());
         }
       });
 
       // Load existing signature if provided
-      if (value && signaturePadRef.current) {
-        signaturePadRef.current.fromDataURL(value);
+      if (valueRef.current && signaturePadRef.current) {
+        signaturePadRef.current.fromDataURL(valueRef.current);
         setIsEmpty(false);
       }
     }

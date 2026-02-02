@@ -5,42 +5,96 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================================================
-// USER & RESIDENCY
+// AUTH.JS MODELS
 // ============================================================================
 
 model User {
-  id                String   @id @default(cuid())
-  email             String   @unique
-  residentId        String?  @unique @map("resident_id") // Próspera Resident ID
-  firstName         String   @map("first_name")
-  lastName          String   @map("last_name")
-  middleName        String?  @map("middle_name")
+  id                String    @id @default(cuid())
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime? @map("email_verified")
+  image             String?
+
+  // Próspera-specific fields
+  residentId        String?   @unique @map("resident_id")
+  firstName         String?   @map("first_name")
+  lastName          String?   @map("last_name")
+  middleName        String?   @map("middle_name")
   dateOfBirth       DateTime? @map("date_of_birth")
   nationality       String?
-  passportNumber    String?  @map("passport_number")
+  passportNumber    String?   @map("passport_number")
   phone             String?
 
   // Address
-  addressLine1      String?  @map("address_line_1")
-  addressLine2      String?  @map("address_line_2")
+  addressLine1      String?   @map("address_line_1")
+  addressLine2      String?   @map("address_line_2")
   city              String?
   state             String?
   country           String?
-  postalCode        String?  @map("postal_code")
+  postalCode        String?   @map("postal_code")
 
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  // Relations
+  // AuthJS Relations
+  accounts          Account[]
+  sessions          Session[]
+
+  // Tax Relations
   incomeTaxReturns  IncomeTaxReturn[]
   vatReturns        VatReturn[]
 
   @@map("users")
+}
+
+model Account {
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken      String   @unique @map("session_token")
+  userId            String   @map("user_id")
+  expires           DateTime
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier        String
+  token             String
+  expires           DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
 }
 
 // ============================================================================
@@ -50,7 +104,7 @@ model User {
 model IncomeTaxReturn {
   id                    String   @id @default(cuid())
   userId                String   @map("user_id")
-  user                  User     @relation(fields: [userId], references: [id])
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Tax Period
   taxYear               Int      @map("tax_year")
@@ -61,10 +115,10 @@ model IncomeTaxReturn {
 
   // Income Information
   grossIncome           Decimal  @map("gross_income") @db.Decimal(15, 2)
-  presumedIncome        Decimal  @map("presumed_income") @db.Decimal(15, 2) // 50% of gross
+  presumedIncome        Decimal  @map("presumed_income") @db.Decimal(15, 2)
   taxableIncome         Decimal  @map("taxable_income") @db.Decimal(15, 2)
 
-  // Tax Calculation (10% of presumed income = 5% effective)
+  // Tax Calculation
   taxRate               Decimal  @map("tax_rate") @db.Decimal(5, 4) @default(0.10)
   taxOwed               Decimal  @map("tax_owed") @db.Decimal(15, 2)
 
@@ -77,11 +131,11 @@ model IncomeTaxReturn {
   // Final Amount
   totalDue              Decimal  @map("total_due") @db.Decimal(15, 2)
 
-  // Income Sources (JSON for flexibility)
+  // Income Sources (JSON)
   incomeSources         Json?    @map("income_sources")
 
   // Signature
-  signatureData         String?  @map("signature_data") // Base64 encoded signature
+  signatureData         String?  @map("signature_data") @db.Text
   signedAt              DateTime? @map("signed_at")
   certificationAccepted Boolean  @default(false) @map("certification_accepted")
 
@@ -108,11 +162,11 @@ model IncomeTaxReturn {
 model VatReturn {
   id                    String   @id @default(cuid())
   userId                String   @map("user_id")
-  user                  User     @relation(fields: [userId], references: [id])
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Tax Period
   taxYear               Int      @map("tax_year")
-  quarter               Int      // 1, 2, 3, or 4
+  quarter               Int
   periodStart           DateTime @map("period_start")
   periodEnd             DateTime @map("period_end")
 
@@ -122,9 +176,9 @@ model VatReturn {
 
   // Sales Information
   totalRetailSales      Decimal  @map("total_retail_sales") @db.Decimal(15, 2)
-  valueAdded            Decimal  @map("value_added") @db.Decimal(15, 2) // 50% of retail sales
+  valueAdded            Decimal  @map("value_added") @db.Decimal(15, 2)
 
-  // Tax Calculation (5% of value added = 2.5% effective)
+  // Tax Calculation
   vatRate               Decimal  @map("vat_rate") @db.Decimal(5, 4) @default(0.05)
   vatOwed               Decimal  @map("vat_owed") @db.Decimal(15, 2)
 
@@ -136,11 +190,11 @@ model VatReturn {
   // Final Amount
   totalDue              Decimal  @map("total_due") @db.Decimal(15, 2)
 
-  // Sales Breakdown (JSON for flexibility)
+  // Sales Breakdown (JSON)
   salesBreakdown        Json?    @map("sales_breakdown")
 
   // Signature
-  signatureData         String?  @map("signature_data")
+  signatureData         String?  @map("signature_data") @db.Text
   signedAt              DateTime? @map("signed_at")
   certificationAccepted Boolean  @default(false) @map("certification_accepted")
 
@@ -162,26 +216,21 @@ model VatReturn {
 model Payment {
   id                    String   @id @default(cuid())
 
-  // Link to tax return (one of these will be set)
   incomeTaxReturnId     String?  @unique @map("income_tax_return_id")
   incomeTaxReturn       IncomeTaxReturn? @relation(fields: [incomeTaxReturnId], references: [id])
 
   vatReturnId           String?  @unique @map("vat_return_id")
   vatReturn             VatReturn? @relation(fields: [vatReturnId], references: [id])
 
-  // Payment Details
   amount                Decimal  @db.Decimal(15, 2)
   currency              String   @default("USD")
   paymentMethod         PaymentMethod @map("payment_method")
 
-  // Status
   status                PaymentStatus @default(PENDING)
 
-  // External Reference
   externalId            String?  @map("external_id")
-  transactionHash       String?  @map("transaction_hash") // For crypto payments
+  transactionHash       String?  @map("transaction_hash")
 
-  // Timestamps
   paidAt                DateTime? @map("paid_at")
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
