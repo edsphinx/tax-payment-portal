@@ -25,6 +25,8 @@ import { useVatForm } from "@/hooks";
 import { formatCurrency, getQuarterDates, VAT_PAYMENT_INFO } from "@/lib/tax-calculations";
 import { ACCOUNTING_METHODS } from "@/types";
 import { SignaturePad } from "./signature-pad";
+import { FillFormButton } from "@/components/ui/fill-form-button";
+import type { RandomFormData } from "@/lib/random-data";
 import { format } from "date-fns";
 
 const currentYear = new Date().getFullYear();
@@ -81,6 +83,23 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
   const totalRetailSales = form.watch("totalRetailSales") || 0;
   const mtcCredit = form.watch("mtcCredit") || 0;
   const quarterDates = getQuarterDates(taxYear, quarter);
+
+  // Handler for filling form with random test data
+  const handleFillForm = (data: RandomFormData) => {
+    form.setValue("firstName", data.firstName);
+    form.setValue("lastName", data.lastName);
+    form.setValue("middleInitial", data.middleInitial);
+    form.setValue("email", data.email);
+    form.setValue("residentId", data.residentId);
+    form.setValue("addressLine1", data.addressLine1);
+    form.setValue("city", data.city);
+    form.setValue("state", data.state);
+    form.setValue("postalCode", data.postalCode);
+    form.setValue("country", data.country);
+    form.setValue("totalRetailSales", data.totalRetailSales);
+    form.setValue("mtcCredit", 0); // Reset MTC since it depends on calculation
+    form.setValue("accountingMethod", "CASH");
+  };
 
   if (isSubmitted) {
     return (
@@ -140,12 +159,17 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
           {currentStep === 1 && (
             <>
               <CardHeader>
-                <CardTitle>Taxpayer Information</CardTitle>
-                <CardDescription>
-                  Form 3 - Retail VAT Quarterly Return (Natural Person Retailer)
-                  <br />
-                  <span className="text-xs">Tax Statute 2019, Sections 2-1-38-9-0-0-56, et seq.</span>
-                </CardDescription>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>Taxpayer Information</CardTitle>
+                    <CardDescription>
+                      Form 3 - Retail VAT Quarterly Return (Natural Person Retailer)
+                      <br />
+                      <span className="text-xs">Tax Statute 2019, Sections 2-1-38-9-0-0-56, et seq.</span>
+                    </CardDescription>
+                  </div>
+                  <FillFormButton onDataFetched={handleFillForm} />
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-12 gap-4">

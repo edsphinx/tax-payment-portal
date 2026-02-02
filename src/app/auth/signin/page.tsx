@@ -37,6 +37,17 @@ export default function SignInPage() {
     }
   };
 
+  const handleDemoSignIn = async () => {
+    setIsLoading(true);
+    try {
+      await signIn("credentials", { email: "demo@prospera.hn", callbackUrl: "/dashboard" });
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (emailSent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -129,6 +140,18 @@ export default function SignInPage() {
               {isLoading ? "Sending..." : "Send magic link"}
             </Button>
           </form>
+
+          {/* Demo Account - Always visible */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={handleDemoSignIn}
+              disabled={isLoading}
+              className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 py-2"
+            >
+              {isLoading ? "Signing in..." : "Try with demo account"}
+            </button>
+          </div>
 
           {/* Dev Mode */}
           {process.env.NODE_ENV === "development" && (

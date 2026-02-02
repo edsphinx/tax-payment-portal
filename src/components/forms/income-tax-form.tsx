@@ -25,6 +25,8 @@ import { useIncomeTaxForm } from "@/hooks";
 import { formatCurrency } from "@/lib/tax-calculations";
 import { TAX_RATES, ACCOUNTING_METHODS } from "@/types";
 import { SignaturePad } from "./signature-pad";
+import { FillFormButton } from "@/components/ui/fill-form-button";
+import type { RandomFormData } from "@/lib/random-data";
 
 const currentYear = new Date().getFullYear();
 const taxYears = [currentYear - 1, currentYear - 2, currentYear - 3];
@@ -75,6 +77,25 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
   const businessIncome = form.watch("businessIncome") || 0;
   const entityDistributions = form.watch("entityDistributions") || 0;
   const mtcCredit = form.watch("mtcCredit") || 0;
+
+  // Handler for filling form with random test data
+  const handleFillForm = (data: RandomFormData) => {
+    form.setValue("firstName", data.firstName);
+    form.setValue("lastName", data.lastName);
+    form.setValue("middleInitial", data.middleInitial);
+    form.setValue("email", data.email);
+    form.setValue("residentId", data.residentId);
+    form.setValue("addressLine1", data.addressLine1);
+    form.setValue("city", data.city);
+    form.setValue("state", data.state);
+    form.setValue("postalCode", data.postalCode);
+    form.setValue("country", data.country);
+    form.setValue("employmentIncome", data.employmentIncome);
+    form.setValue("businessIncome", data.businessIncome);
+    form.setValue("entityDistributions", data.entityDistributions);
+    form.setValue("mtcCredit", data.mtcCredit);
+    form.setValue("accountingMethod", "CASH");
+  };
 
   if (isSubmitted) {
     return (
@@ -127,10 +148,15 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
           {currentStep === 1 && (
             <>
               <CardHeader>
-                <CardTitle>Taxpayer Information</CardTitle>
-                <CardDescription>
-                  Form 1 - As registered with Prospera ZEDE (Tax Statute 2019, Sections 2-1-38-4-0-0-21, et seq.)
-                </CardDescription>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>Taxpayer Information</CardTitle>
+                    <CardDescription>
+                      Form 1 - As registered with Prospera ZEDE (Tax Statute 2019, Sections 2-1-38-4-0-0-21, et seq.)
+                    </CardDescription>
+                  </div>
+                  <FillFormButton onDataFetched={handleFillForm} />
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-12 gap-4">

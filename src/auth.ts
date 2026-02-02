@@ -20,16 +20,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       from: "Próspera Tax Portal <noreply@prospera.hn>",
     }),
 
-    // Credentials for development/testing
+    // Credentials for testing (demo account)
     Credentials({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
       },
       async authorize(credentials) {
-        // For development only - remove in production
-        if (process.env.NODE_ENV === "development") {
-          const email = credentials?.email as string;
+        const email = credentials?.email as string;
+
+        // Allow demo account in any environment
+        const isDemoAccount = email === "demo@prospera.hn";
+        const isDevelopment = process.env.NODE_ENV === "development";
+
+        if (isDemoAccount || isDevelopment) {
           if (email) {
             // Find or create user
             let user = await db.user.findUnique({
@@ -37,10 +41,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             });
 
             if (!user) {
+              // Create demo user with pre-filled data
               user = await db.user.create({
                 data: {
                   email,
-                  name: email.split("@")[0],
+                  name: isDemoAccount ? "Demo User" : email.split("@")[0],
+                  firstName: isDemoAccount ? "Demo" : undefined,
+                  lastName: isDemoAccount ? "User" : undefined,
+                  residentId: isDemoAccount ? "PR-2024-00001" : undefined,
                 },
               });
             }
