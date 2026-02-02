@@ -1,17 +1,19 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import Google from "next-auth/providers/google";
-import GitHub from "next-auth/providers/github";
 import Resend from "next-auth/providers/resend";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
+import { authConfig } from "./auth.config";
 
+/**
+ * Full auth config with Prisma adapter
+ * Uses JWT sessions for Edge compatibility
+ */
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(db),
   providers: [
-    // OAuth Providers
-    Google,
-    GitHub,
+    ...authConfig.providers,
 
     // Magic Link via Resend (email)
     Resend({
@@ -50,19 +52,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  session: {
-    strategy: "database",
-  },
-  pages: {
-    signIn: "/auth/signin",
-    error: "/auth/error",
-  },
   callbacks: {
-    async session({ session, user }) {
-      // Add user id and custom fields to session
-      if (session.user) {
-        session.user.id = user.id;
-        // Add Próspera-specific fields
+    ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        // Fetch Próspera-specific fields
         const dbUser = await db.user.findUnique({
           where: { id: user.id },
           select: {
@@ -72,10 +67,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         });
         if (dbUser) {
-          session.user.residentId = dbUser.residentId;
-          session.user.firstName = dbUser.firstName;
-          session.user.lastName = dbUser.lastName;
+          token.residentId = dbUser.residentId;
+          token.firstName = dbUser.firstName;
+          token.lastName = dbUser.lastName;
         }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.residentId = token.residentId as string | null;
+        session.user.firstName = token.firstName as string | null;
+        session.user.lastName = token.lastName as string | null;
       }
       return session;
     },

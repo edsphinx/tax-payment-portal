@@ -1,36 +1,11 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth;
-  const isAuthPage = req.nextUrl.pathname.startsWith("/auth");
-  const isApiAuthRoute = req.nextUrl.pathname.startsWith("/api/auth");
-  const isPublicRoute = req.nextUrl.pathname === "/";
-
-  // Allow API auth routes
-  if (isApiAuthRoute) {
-    return NextResponse.next();
-  }
-
-  // Redirect logged-in users away from auth pages
-  if (isAuthPage && isLoggedIn) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
-  }
-
-  // Allow public routes and auth pages
-  if (isPublicRoute || isAuthPage) {
-    return NextResponse.next();
-  }
-
-  // Protect all other routes
-  if (!isLoggedIn) {
-    const signInUrl = new URL("/auth/signin", req.url);
-    signInUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
-    return NextResponse.redirect(signInUrl);
-  }
-
-  return NextResponse.next();
-});
+/**
+ * Middleware using lightweight auth config (no Prisma)
+ * This keeps the Edge Function under 1MB limit
+ */
+export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: [
