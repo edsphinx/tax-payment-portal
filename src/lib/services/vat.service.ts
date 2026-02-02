@@ -29,9 +29,10 @@ export class VatService {
   static async create(userId: string, input: CreateVatInput) {
     const { taxYear, quarter, totalRetailSales, previousCredits = 0, salesBreakdown, ...rest } = input;
 
+    // Use updated calculation function with MTC credit
     const calculation = calculateVat({
       totalRetailSales,
-      previousCredits,
+      mtcCredit: previousCredits, // Map previousCredits to mtcCredit
     });
 
     const { start: periodStart, end: periodEnd } = getQuarterDates(taxYear, quarter);
@@ -45,7 +46,7 @@ export class VatService {
         periodEnd,
         totalRetailSales,
         valueAdded: calculation.valueAdded,
-        vatOwed: calculation.baseVatOwed,
+        vatOwed: calculation.initialVat,
         previousCredits,
         totalDue: calculation.totalDue,
         status: TaxReturnStatus.DRAFT,
@@ -72,15 +73,16 @@ export class VatService {
       const totalRetailSales = input.totalRetailSales ?? Number(existing.totalRetailSales);
       const previousCredits = input.previousCredits ?? Number(existing.previousCredits);
 
+      // Use updated calculation function with MTC credit
       const calculation = calculateVat({
         totalRetailSales,
-        previousCredits,
+        mtcCredit: previousCredits,
       });
 
       calculationData = {
         totalRetailSales,
         valueAdded: calculation.valueAdded,
-        vatOwed: calculation.baseVatOwed,
+        vatOwed: calculation.initialVat,
         previousCredits,
         totalDue: calculation.totalDue,
       };

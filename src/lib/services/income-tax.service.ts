@@ -29,10 +29,13 @@ export class IncomeTaxService {
   static async create(userId: string, input: CreateIncomeTaxInput) {
     const { taxYear, grossIncome, entityTaxCredits = 0, otherCredits = 0, incomeSources, ...rest } = input;
 
+    // For backward compatibility, treat grossIncome as employment income
+    // The new form separates employmentIncome and businessIncome, but the API still uses grossIncome
     const calculation = calculateIncomeTax({
-      grossIncome,
-      entityTaxCredits,
-      otherCredits,
+      employmentIncome: grossIncome, // Treat as employment income for now
+      businessIncome: 0,
+      entityDistributions: 0,
+      mtcCredit: entityTaxCredits + otherCredits, // Combine credits as MTC
     });
 
     return db.incomeTaxReturn.create({
@@ -40,9 +43,9 @@ export class IncomeTaxService {
         userId,
         taxYear,
         grossIncome,
-        presumedIncome: calculation.presumedIncome,
-        taxableIncome: calculation.presumedIncome,
-        taxOwed: calculation.baseTaxOwed,
+        presumedIncome: calculation.aggregatePresumedIncome,
+        taxableIncome: calculation.aggregatePresumedIncome,
+        taxOwed: calculation.initialTax,
         entityTaxCredits,
         otherCredits,
         totalDue: calculation.totalDue,
@@ -71,17 +74,19 @@ export class IncomeTaxService {
       const entityTaxCredits = input.entityTaxCredits ?? Number(existing.entityTaxCredits);
       const otherCredits = input.otherCredits ?? Number(existing.otherCredits);
 
+      // For backward compatibility, treat grossIncome as employment income
       const calculation = calculateIncomeTax({
-        grossIncome,
-        entityTaxCredits,
-        otherCredits,
+        employmentIncome: grossIncome,
+        businessIncome: 0,
+        entityDistributions: 0,
+        mtcCredit: entityTaxCredits + otherCredits,
       });
 
       calculationData = {
         grossIncome,
-        presumedIncome: calculation.presumedIncome,
-        taxableIncome: calculation.presumedIncome,
-        taxOwed: calculation.baseTaxOwed,
+        presumedIncome: calculation.aggregatePresumedIncome,
+        taxableIncome: calculation.aggregatePresumedIncome,
+        taxOwed: calculation.initialTax,
         entityTaxCredits,
         otherCredits,
         totalDue: calculation.totalDue,

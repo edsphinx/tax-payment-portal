@@ -8,11 +8,12 @@ import { Progress } from "@/components/ui/progress";
 import { VatForm } from "@/components/forms/vat-form";
 
 const STEPS = [
-  { id: 1, name: "Business Info", description: "Your business details" },
-  { id: 2, name: "Tax Period", description: "Select the quarter" },
-  { id: 3, name: "Sales", description: "Report retail sales" },
-  { id: 4, name: "Adjustments", description: "Credits & adjustments" },
-  { id: 5, name: "Review & Sign", description: "Certify and submit" },
+  { id: 1, name: "Taxpayer Info", description: "Your identification details" },
+  { id: 2, name: "Address", description: "Your residence details" },
+  { id: 3, name: "Tax Period", description: "Select the quarter" },
+  { id: 4, name: "Retail Sales", description: "Report sales value" },
+  { id: 5, name: "Tax Credits", description: "Marketable Trade Credit (MTC)" },
+  { id: 6, name: "Review & Sign", description: "Certify and submit" },
 ];
 
 export default function VatPage() {

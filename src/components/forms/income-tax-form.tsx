@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/form";
 import { useIncomeTaxForm } from "@/hooks";
 import { formatCurrency } from "@/lib/tax-calculations";
-import { TAX_RATES } from "@/types";
+import { TAX_RATES, ACCOUNTING_METHODS } from "@/types";
 import { SignaturePad } from "./signature-pad";
 
 const currentYear = new Date().getFullYear();
@@ -47,7 +47,6 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
     prevStep,
     isFiledYear,
     filedYears,
-    loadingReturns,
   } = useIncomeTaxForm({
     totalSteps,
     onSuccess: () => {},
@@ -58,7 +57,6 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
 
   // Sync external step changes
   const handleNext = async () => {
-    // Don't allow proceeding if current year is already filed (from step 3)
     if (currentStep === 3 && currentYearFiled) {
       return;
     }
@@ -73,9 +71,10 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
     onStepChange(currentStep - 1);
   };
 
-  const grossIncome = form.watch("grossIncome") || 0;
-  const entityTaxCredits = form.watch("entityTaxCredits") || 0;
-  const otherCredits = form.watch("otherCredits") || 0;
+  const employmentIncome = form.watch("employmentIncome") || 0;
+  const businessIncome = form.watch("businessIncome") || 0;
+  const entityDistributions = form.watch("entityDistributions") || 0;
+  const mtcCredit = form.watch("mtcCredit") || 0;
 
   if (isSubmitted) {
     return (
@@ -95,15 +94,20 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="font-medium mb-2">Summary</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <span className="text-gray-600">Gross Income:</span>
-              <span className="font-medium">{formatCurrency(grossIncome)}</span>
+              <span className="text-gray-600">Employment Income:</span>
+              <span className="font-medium">{formatCurrency(employmentIncome)}</span>
+              <span className="text-gray-600">Business Income:</span>
+              <span className="font-medium">{formatCurrency(businessIncome)}</span>
               <span className="text-gray-600">Total Tax Due:</span>
               <span className="font-medium text-blue-600">{formatCurrency(taxCalculation.totalDue)}</span>
             </div>
           </div>
           <p className="text-sm text-gray-600 text-center">
             You will receive a confirmation email at {form.getValues("email")}.
-            Payment is due by April 30th.
+            <br />
+            <strong>Due date: April 1, {form.getValues("taxYear") + 1}</strong>
+            <br />
+            Email to: gsp@prospera.hn
           </p>
           <div className="flex justify-center">
             <Button onClick={() => window.location.href = "/dashboard"}>
@@ -119,55 +123,96 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
     <Form {...form}>
       <form onSubmit={form.handleSubmit(submit)}>
         <Card className="max-w-2xl mx-auto">
-          {/* Step 1: Personal Information */}
+          {/* Step 1: Taxpayer Information */}
           {currentStep === 1 && (
             <>
               <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
+                <CardTitle>Taxpayer Information</CardTitle>
                 <CardDescription>
-                  Please provide your personal details as registered with Próspera.
+                  Form 1 - As registered with Prospera ZEDE (Tax Statute 2019, Sections 2-1-38-4-0-0-21, et seq.)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="John" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-5">
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name (Taxpayer) *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <FormField
+                      control={form.control}
+                      name="middleInitial"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Middle Initial</FormLabel>
+                          <FormControl>
+                            <Input placeholder="M" maxLength={1} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="col-span-5">
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name (Taxpayer) *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="accountingMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Accounting Method (Select One) *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select accounting method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={ACCOUNTING_METHODS.CASH}>Cash</SelectItem>
+                          <SelectItem value={ACCOUNTING_METHODS.ACCRUAL}>Accrual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
                   name="residentId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Próspera Resident ID *</FormLabel>
+                      <FormLabel>(e)Resident Permit Number (Taxpayer) *</FormLabel>
                       <FormControl>
                         <Input placeholder="PZ-XXXXX" {...field} />
                       </FormControl>
-                      <FormDescription>Your unique Próspera resident identifier</FormDescription>
+                      <FormDescription>Your unique Prospera eResidency permit identifier</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -178,23 +223,9 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email Address *</FormLabel>
+                      <FormLabel>(e)Residency E-Mail (Taxpayer) *</FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="john@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="+1 (555) 000-0000" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -209,7 +240,7 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
             <>
               <CardHeader>
                 <CardTitle>Address Information</CardTitle>
-                <CardDescription>Your current residence address for tax purposes.</CardDescription>
+                <CardDescription>Your residence address for tax purposes.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
@@ -217,23 +248,9 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                   name="addressLine1"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Address Line 1 *</FormLabel>
+                      <FormLabel>Home Address (number, apt & street) *</FormLabel>
                       <FormControl>
-                        <Input placeholder="123 Main Street" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="addressLine2"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address Line 2</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Apt, Suite, etc." {...field} />
+                        <Input placeholder="123 Main Street, Apt 4B" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -246,9 +263,39 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                     name="city"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City *</FormLabel>
+                        <FormLabel>City/Town/Jurisdiction *</FormLabel>
                         <FormControl>
-                          <Input placeholder="Roatán" {...field} />
+                          <Input placeholder="Roatan" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dept/State *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Islas de la Bahia" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postal Code *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="34101" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -278,7 +325,11 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
             <>
               <CardHeader>
                 <CardTitle>Income Information</CardTitle>
-                <CardDescription>Report your gross income earned within Próspera ZEDE.</CardDescription>
+                <CardDescription>
+                  Report income arising in, sourced or derived from Prospera ZEDE.
+                  <br />
+                  <span className="text-xs text-gray-500">State in USD or Lempira</span>
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -343,70 +394,172 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                   </div>
                 )}
 
-                <FormField
-                  control={form.control}
-                  name="grossIncome"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gross Income (USD) *</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          {...field}
-                          value={field.value || ""}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormDescription>Total income earned within Próspera. Enter 0 if none.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <h4 className="font-medium text-amber-900 mb-3">Income Calculation Lines</h4>
+
+                  {/* Line 1 */}
+                  <FormField
+                    control={form.control}
+                    name="employmentIncome"
+                    render={({ field }) => (
+                      <FormItem className="mb-4">
+                        <FormLabel>
+                          <span className="font-bold">Line 1:</span> Revenue from employment (wages, salary, compensation) *
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value || ""}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Including wages, salaries and other compensation from Prospera ZEDE
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Line 2 - Calculated */}
+                  <div className="bg-white rounded p-3 mb-4 border">
+                    <p className="text-sm">
+                      <span className="font-bold">Line 2:</span> Presumed Income from Employment
+                    </p>
+                    <p className="text-xs text-gray-500 mb-1">
+                      50% of (Line 1 - ${TAX_RATES.INCOME_TAX.EMPLOYMENT_DEDUCTION.toLocaleString()}) per Sections 2-1-38-2-0-0-4
+                    </p>
+                    <p className="font-medium text-blue-600">
+                      {formatCurrency(taxCalculation.presumedEmploymentIncome)}
+                    </p>
+                  </div>
+
+                  {/* Line 3 */}
+                  <FormField
+                    control={form.control}
+                    name="businessIncome"
+                    render={({ field }) => (
+                      <FormItem className="mb-4">
+                        <FormLabel>
+                          <span className="font-bold">Line 3:</span> Revenue from trade, profession, business or company *
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value || ""}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Including royalties, dividends or distributions (other than Line 1)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Line 4 - Calculated */}
+                  <div className="bg-white rounded p-3 mb-4 border">
+                    <p className="text-sm">
+                      <span className="font-bold">Line 4:</span> Presumed Income from Business
+                    </p>
+                    <p className="text-xs text-gray-500 mb-1">
+                      50% of Line 3 per Sections 2-1-38-3-0-0-8
+                    </p>
+                    <p className="font-medium text-blue-600">
+                      {formatCurrency(taxCalculation.presumedBusinessIncome)}
+                    </p>
+                  </div>
+
+                  {/* Line 5 - Input */}
+                  <FormField
+                    control={form.control}
+                    name="entityDistributions"
+                    render={({ field }) => (
+                      <FormItem className="mb-4">
+                        <FormLabel>
+                          <span className="font-bold">Line 5:</span> Distributions from owned companies (for deduction)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value || ""}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          10% deduction for amounts distributed from companies you beneficially own and which paid income taxes at company level per Section 2-1-38-4-0-0-21(2)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Line 5 Deduction - Calculated */}
+                  <div className="bg-white rounded p-3 mb-4 border">
+                    <p className="text-sm">
+                      <span className="font-bold">Line 5 Deduction:</span> 10% of distributions
+                    </p>
+                    <p className="font-medium text-green-600">
+                      -{formatCurrency(taxCalculation.entityDistributionDeduction)}
+                    </p>
+                  </div>
+                </div>
 
                 <div className="bg-blue-50 rounded-lg p-4 space-y-2">
                   <h4 className="font-medium text-blue-900">Tax Calculation Preview</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <span className="text-blue-700">Gross Income:</span>
-                    <span className="font-medium">{formatCurrency(grossIncome)}</span>
-                    <span className="text-blue-700">Presumed Income (50%):</span>
-                    <span>{formatCurrency(taxCalculation.presumedIncome)}</span>
-                    <span className="text-blue-700">Tax Rate:</span>
-                    <span>10%</span>
+                    <span className="text-blue-700 font-bold">Line 6: Aggregate Presumed Income:</span>
+                    <span className="font-medium">{formatCurrency(taxCalculation.aggregatePresumedIncome)}</span>
+                    <span className="text-blue-700 text-xs col-span-2">(Line 2 + Line 4 - Line 5 deduction)</span>
                     <Separator className="col-span-2 my-1" />
-                    <span className="text-blue-700 font-medium">Estimated Tax:</span>
-                    <span className="font-bold text-blue-900">{formatCurrency(taxCalculation.baseTaxOwed)}</span>
+                    <span className="text-blue-700 font-bold">Line 7: Initial Income Tax (10%):</span>
+                    <span className="font-bold text-blue-900">{formatCurrency(taxCalculation.initialTax)}</span>
                   </div>
-                  <p className="text-xs text-blue-600 mt-2">
-                    Effective tax rate: {(TAX_RATES.INCOME_TAX.EFFECTIVE_RATE * 100).toFixed(0)}% of gross income
-                  </p>
                 </div>
               </CardContent>
             </>
           )}
 
-          {/* Step 4: Credits & Adjustments */}
+          {/* Step 4: Credits */}
           {currentStep === 4 && (
             <>
               <CardHeader>
-                <CardTitle>Credits & Adjustments</CardTitle>
-                <CardDescription>Enter any tax credits you&apos;re eligible to claim.</CardDescription>
+                <CardTitle>Marketable Tax Credit (MTC)</CardTitle>
+                <CardDescription>
+                  Line 8: Credit for Marketable Tax Credit Applied
+                  <br />
+                  <span className="text-xs text-red-600">Attach MTC forms to support amount. CANNOT EXCEED amount in Line 7.</span>
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="entityTaxCredits"
+                  name="mtcCredit"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Entity Tax Credits (USD)</FormLabel>
+                      <FormLabel>MTC Credit Amount (USD)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           step="0.01"
                           min="0"
+                          max={taxCalculation.initialTax}
                           placeholder="0.00"
                           {...field}
                           value={field.value || ""}
@@ -414,47 +567,33 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                           onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
-                      <FormDescription>Credits from income tax paid by legal entities you own.</FormDescription>
+                      <FormDescription>
+                        Maximum allowed: {formatCurrency(taxCalculation.initialTax)} (Line 7 amount)
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="otherCredits"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Other Credits (USD)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          {...field}
-                          value={field.value || ""}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {mtcCredit > taxCalculation.initialTax && (
+                  <div className="bg-red-100 border border-red-300 rounded-lg p-3">
+                    <p className="text-red-700 text-sm font-medium">
+                      Warning: MTC Credit cannot exceed Line 7 ({formatCurrency(taxCalculation.initialTax)}).
+                      The credit will be capped at the maximum.
+                    </p>
+                  </div>
+                )}
 
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <h4 className="font-medium">Updated Tax Calculation</h4>
+                  <h4 className="font-medium">Final Tax Calculation</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <span className="text-gray-600">Base Tax:</span>
-                    <span>{formatCurrency(taxCalculation.baseTaxOwed)}</span>
-                    <span className="text-gray-600">Entity Credits:</span>
-                    <span className="text-green-600">-{formatCurrency(entityTaxCredits)}</span>
-                    <span className="text-gray-600">Other Credits:</span>
-                    <span className="text-green-600">-{formatCurrency(otherCredits)}</span>
+                    <span className="text-gray-600">Line 7: Initial Tax:</span>
+                    <span>{formatCurrency(taxCalculation.initialTax)}</span>
+                    <span className="text-gray-600">Line 8: MTC Credit Applied:</span>
+                    <span className="text-green-600">-{formatCurrency(taxCalculation.mtcCredit)}</span>
                     <Separator className="col-span-2 my-1" />
-                    <span className="font-medium">Net Tax Due:</span>
-                    <span className="font-bold">{formatCurrency(taxCalculation.totalDue)}</span>
+                    <span className="font-bold">Line 9: Income Tax Liability:</span>
+                    <span className="font-bold text-blue-600">{formatCurrency(taxCalculation.taxLiability)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -485,7 +624,7 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                 />
 
                 {form.watch("useTaxPreparer") && (
-                  <div className="space-y-4 pt-4">
+                  <div className="space-y-4 pt-4 border-t">
                     <FormField
                       control={form.control}
                       name="preparerName"
@@ -494,6 +633,32 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                           <FormLabel>Preparer Name</FormLabel>
                           <FormControl>
                             <Input placeholder="Full name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="preparerEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preparer Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="preparer@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="preparerAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Preparer Address (including zip code)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Address, City, State, ZIP" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -509,7 +674,7 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
           {currentStep === 6 && (
             <>
               <CardHeader>
-                <CardTitle>Review & Certification</CardTitle>
+                <CardTitle>Certification</CardTitle>
                 <CardDescription>Review your information and sign to submit your return.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -517,31 +682,48 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                   <h4 className="font-medium">Return Summary</h4>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <span className="text-gray-600">Name:</span>
-                    <span>{form.getValues("firstName")} {form.getValues("lastName")}</span>
+                    <span>{form.getValues("firstName")} {form.getValues("middleInitial")} {form.getValues("lastName")}</span>
                     <span className="text-gray-600">Tax Year:</span>
                     <span>{form.getValues("taxYear")}</span>
-                    <span className="text-gray-600">Gross Income:</span>
-                    <span>{formatCurrency(grossIncome)}</span>
+                    <span className="text-gray-600">Line 1 (Employment):</span>
+                    <span>{formatCurrency(employmentIncome)}</span>
+                    <span className="text-gray-600">Line 3 (Business):</span>
+                    <span>{formatCurrency(businessIncome)}</span>
+                    <span className="text-gray-600">Line 6 (Aggregate Presumed):</span>
+                    <span>{formatCurrency(taxCalculation.aggregatePresumedIncome)}</span>
+                    <span className="text-gray-600">Line 7 (Initial Tax):</span>
+                    <span>{formatCurrency(taxCalculation.initialTax)}</span>
+                    <span className="text-gray-600">Line 8 (MTC Credit):</span>
+                    <span className="text-green-600">-{formatCurrency(taxCalculation.mtcCredit)}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-lg">Total Tax Due:</span>
-                    <span className="font-bold text-xl text-blue-600">{formatCurrency(taxCalculation.totalDue)}</span>
+                    <span className="font-semibold text-lg">Line 9: Income Tax Liability:</span>
+                    <span className="font-bold text-xl text-blue-600">{formatCurrency(taxCalculation.taxLiability)}</span>
                   </div>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-sm text-amber-800">
+                    <strong>Email by April 1 to Prospera Tax Commissioner:</strong> gsp@prospera.hn
+                  </p>
                 </div>
 
                 <FormField
                   control={form.control}
                   name="certificationAccepted"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-blue-50">
                       <FormControl>
                         <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>I certify under penalty of perjury *</FormLabel>
-                        <FormDescription>
-                          I declare that the information provided is true, correct, and complete.
+                        <FormLabel className="font-bold">I certify under penalty of perjury *</FormLabel>
+                        <FormDescription className="text-xs">
+                          I declare that the foregoing information is true, correct, and complete to the best of my knowledge.
+                          All statements applicable to the form of proof under the Prospera Civil Penalty Schedule, International
+                          Commercial Terms Inc., Ed. 2017, are incorporated herein to the full extent applicable. Jurisdiction
+                          applies to the local law of Prospera ZEDE.
                         </FormDescription>
                       </div>
                     </FormItem>
@@ -553,7 +735,7 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                   name="signatureData"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Signature *</FormLabel>
+                      <FormLabel>Signature (Taxpayer) *</FormLabel>
                       <FormControl>
                         <SignaturePad onSave={(data) => field.onChange(data)} value={field.value} />
                       </FormControl>

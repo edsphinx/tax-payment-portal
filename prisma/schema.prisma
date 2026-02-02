@@ -99,6 +99,7 @@ model VerificationToken {
 
 // ============================================================================
 // INCOME TAX RETURN (Annual - Form 1)
+// Per Tax Statute 2019, §§2-1-38-4-0-0-21, et seq.
 // ============================================================================
 
 model IncomeTaxReturn {
@@ -109,26 +110,47 @@ model IncomeTaxReturn {
   // Tax Period
   taxYear               Int      @map("tax_year")
 
+  // Taxpayer Info (Form 1 header)
+  middleInitial         String?  @map("middle_initial")
+  accountingMethod      String?  @map("accounting_method") // CASH or ACCRUAL
+
+  // Address (if different from user profile)
+  addressLine1          String?  @map("address_line_1")
+  city                  String?
+  state                 String?
+  postalCode            String?  @map("postal_code")
+  country               String?
+
   // Status
   status                TaxReturnStatus @default(DRAFT)
   submittedAt           DateTime?       @map("submitted_at")
 
-  // Income Information
+  // Income Information - Form 1 Lines
+  // Line 1: Employment income (wages, salary, compensation)
+  employmentIncome      Decimal  @map("employment_income") @db.Decimal(15, 2) @default(0)
+  // Line 3: Business income (royalties, dividends, distributions)
+  businessIncome        Decimal  @map("business_income") @db.Decimal(15, 2) @default(0)
+  // Line 5 input: Distributions from owned companies (for 10% deduction)
+  entityDistributions   Decimal  @map("entity_distributions") @db.Decimal(15, 2) @default(0)
+
+  // Legacy field - sum of employment + business income
   grossIncome           Decimal  @map("gross_income") @db.Decimal(15, 2)
+  // Line 6: Aggregate Presumed Income
   presumedIncome        Decimal  @map("presumed_income") @db.Decimal(15, 2)
   taxableIncome         Decimal  @map("taxable_income") @db.Decimal(15, 2)
 
   // Tax Calculation
   taxRate               Decimal  @map("tax_rate") @db.Decimal(5, 4) @default(0.10)
+  // Line 7: Initial Tax
   taxOwed               Decimal  @map("tax_owed") @db.Decimal(15, 2)
 
-  // Credits & Adjustments
+  // Credits - Form 1 Line 8 (MTC)
   entityTaxCredits      Decimal  @map("entity_tax_credits") @db.Decimal(15, 2) @default(0)
   otherCredits          Decimal  @map("other_credits") @db.Decimal(15, 2) @default(0)
   penalties             Decimal  @db.Decimal(15, 2) @default(0)
   interest              Decimal  @db.Decimal(15, 2) @default(0)
 
-  // Final Amount
+  // Line 9: Final Amount
   totalDue              Decimal  @map("total_due") @db.Decimal(15, 2)
 
   // Income Sources (JSON)
@@ -143,6 +165,7 @@ model IncomeTaxReturn {
   preparerName          String?  @map("preparer_name")
   preparerEmail         String?  @map("preparer_email")
   preparerPhone         String?  @map("preparer_phone")
+  preparerAddress       String?  @map("preparer_address")
 
   // Timestamps
   createdAt             DateTime @default(now()) @map("created_at")
@@ -156,7 +179,8 @@ model IncomeTaxReturn {
 }
 
 // ============================================================================
-// VAT RETURN (Quarterly)
+// VAT RETURN (Quarterly - Form 3)
+// Per Tax Statute 2019, §§2-1-38-9-0-0-56, et seq.
 // ============================================================================
 
 model VatReturn {
@@ -170,24 +194,39 @@ model VatReturn {
   periodStart           DateTime @map("period_start")
   periodEnd             DateTime @map("period_end")
 
+  // Taxpayer Info (Form 3 header)
+  middleInitial         String?  @map("middle_initial")
+  accountingMethod      String?  @map("accounting_method") // CASH or ACCRUAL
+
+  // Address (required for Form 3)
+  addressLine1          String?  @map("address_line_1")
+  city                  String?
+  state                 String?
+  postalCode            String?  @map("postal_code")
+  country               String?
+  email                 String?
+
   // Status
   status                TaxReturnStatus @default(DRAFT)
   submittedAt           DateTime?       @map("submitted_at")
 
-  // Sales Information
+  // Sales Information - Form 3 Lines
+  // Line 1: Value received for sale of goods and services
   totalRetailSales      Decimal  @map("total_retail_sales") @db.Decimal(15, 2)
+  // Line 2: Presumed Value Added (50% of Line 1)
   valueAdded            Decimal  @map("value_added") @db.Decimal(15, 2)
 
   // Tax Calculation
   vatRate               Decimal  @map("vat_rate") @db.Decimal(5, 4) @default(0.05)
+  // Line 3: Initial Retail VAT (5% of Line 2)
   vatOwed               Decimal  @map("vat_owed") @db.Decimal(15, 2)
 
-  // Adjustments
+  // Line 4: Marketable Trade Credit (MTC)
   previousCredits       Decimal  @map("previous_credits") @db.Decimal(15, 2) @default(0)
   penalties             Decimal  @db.Decimal(15, 2) @default(0)
   interest              Decimal  @db.Decimal(15, 2) @default(0)
 
-  // Final Amount
+  // Line 5: Final Amount (VAT Liability)
   totalDue              Decimal  @map("total_due") @db.Decimal(15, 2)
 
   // Sales Breakdown (JSON)

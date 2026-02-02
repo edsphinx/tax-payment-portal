@@ -196,50 +196,81 @@ export interface Payment {
 // TAX CALCULATIONS
 // ============================================================================
 
+/**
+ * Income Tax Calculation following Próspera ZEDE Form 1
+ * Based on Tax Statute 2019, §§2-1-38-4-0-0-21, et seq.
+ */
 export interface IncomeTaxCalculation {
-  grossIncome: number;
-  presumedIncome: number;
+  // Line 1: Revenue from employment (wages, salary, compensation)
+  employmentIncome: number;
+  // Line 2: Presumed Income from Employment = (Line 1 - $8,000) × 50%, min 0
+  presumedEmploymentIncome: number;
+  // Line 3: Revenue from business (royalties, dividends, distributions)
+  businessIncome: number;
+  // Line 4: Presumed Income from Business = Line 3 × 50%
+  presumedBusinessIncome: number;
+  // Line 5: Deduction for 10% of distributions from owned companies
+  entityDistributionDeduction: number;
+  // Line 6: Aggregate Presumed Income = Line 2 + Line 4 - Line 5
+  aggregatePresumedIncome: number;
+  // Line 7: Initial Income Tax = Line 6 × 10%
+  initialTax: number;
+  // Line 8: Marketable Tax Credit (MTC) - cannot exceed Line 7
+  mtcCredit: number;
+  // Line 9: Income Tax Liability = Line 7 - Line 8
+  taxLiability: number;
+  // Additional fields
   taxRate: number;
-  baseTaxOwed: number;
-  entityTaxCredits: number;
-  otherCredits: number;
-  totalCredits: number;
-  netTaxOwed: number;
   penalties: number;
   interest: number;
   totalDue: number;
 }
 
+/**
+ * VAT Calculation following Próspera ZEDE Form 3
+ * Based on Tax Statute 2019, §§2-1-38-9-0-0-56, et seq.
+ */
 export interface VatCalculation {
+  // Line 1: Value received for sale of goods and services
   totalRetailSales: number;
+  // Line 2: Presumed Value Added = Line 1 × 50%
   valueAdded: number;
+  // Line 3: Initial Retail VAT = Line 2 × 5%
+  initialVat: number;
+  // Line 4: Marketable Trade Credit (MTC) - cannot exceed Line 3
+  mtcCredit: number;
+  // Line 5: VAT Liability = Line 3 - Line 4
+  vatLiability: number;
+  // Additional fields
   vatRate: number;
-  baseVatOwed: number;
-  previousCredits: number;
-  netVatOwed: number;
   penalties: number;
   interest: number;
   totalDue: number;
 }
 
 // ============================================================================
-// TAX RATES (Constants)
+// TAX RATES (Constants) - Per Próspera ZEDE Tax Statute 2019
 // ============================================================================
 
 export const TAX_RATES = {
   INCOME_TAX: {
-    PRESUMED_INCOME_PERCENTAGE: 0.5,
-    TAX_RATE: 0.1,
-    EFFECTIVE_RATE: 0.05,
-  },
-  BUSINESS_TAX: {
-    PRESUMED_INCOME_PERCENTAGE: 0.1,
-    TAX_RATE: 0.1,
-    EFFECTIVE_RATE: 0.01,
+    // Employment income: (income - $8,000) × 50% = presumed income
+    EMPLOYMENT_DEDUCTION: 8000, // $8,000 or Lempira equivalent
+    PRESUMED_INCOME_PERCENTAGE: 0.5, // 50%
+    TAX_RATE: 0.1, // 10%
+    // For business distributions deduction
+    ENTITY_DISTRIBUTION_DEDUCTION_RATE: 0.1, // 10% of distributions
   },
   VAT: {
-    VALUE_ADDED_PERCENTAGE: 0.5,
-    TAX_RATE: 0.05,
-    EFFECTIVE_RATE: 0.025,
+    VALUE_ADDED_PERCENTAGE: 0.5, // 50%
+    TAX_RATE: 0.05, // 5%
   },
 } as const;
+
+// Accounting methods as per Form 1 and Form 3
+export const ACCOUNTING_METHODS = {
+  CASH: "CASH",
+  ACCRUAL: "ACCRUAL",
+} as const;
+
+export type AccountingMethod = (typeof ACCOUNTING_METHODS)[keyof typeof ACCOUNTING_METHODS];

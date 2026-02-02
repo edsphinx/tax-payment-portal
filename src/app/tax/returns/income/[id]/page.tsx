@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/tax-calculations";
+import { TAX_RATES } from "@/types";
 import { DownloadPdfButton } from "@/components/tax/download-pdf-button";
 
 interface PageProps {
@@ -43,10 +44,19 @@ export default async function IncomeTaxReturnPage({ params }: PageProps) {
     notFound();
   }
 
+  // Calculate line values for display
+  const grossIncome = Number(taxReturn.grossIncome);
+  const presumedIncome = Number(taxReturn.presumedIncome);
+  const taxOwed = Number(taxReturn.taxOwed);
+  const entityTaxCredits = Number(taxReturn.entityTaxCredits);
+  const otherCredits = Number(taxReturn.otherCredits);
+  const totalDue = Number(taxReturn.totalDue);
+  const totalCredits = entityTaxCredits + otherCredits;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
+    <div className="min-h-screen bg-gray-50 print:bg-white print:min-h-0">
+      {/* Header - Hide on print */}
+      <header className="bg-white border-b print:hidden">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Link href="/dashboard">
@@ -68,9 +78,22 @@ export default async function IncomeTaxReturnPage({ params }: PageProps) {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
-        {/* Status Banner */}
-        <div className={`rounded-lg p-4 mb-6 ${statusColors[taxReturn.status]}`}>
+      <main className="container mx-auto px-4 py-8 max-w-3xl print:py-0 print:max-w-none">
+        {/* Print Header */}
+        <div className="hidden print:block mb-6">
+          <h1 className="text-2xl font-bold text-center">
+            Prospera ZEDE Natural Person Income Tax Return
+          </h1>
+          <p className="text-center text-sm text-gray-600">
+            Form 1 - Tax Year {taxReturn.taxYear}
+          </p>
+          <p className="text-center text-xs text-gray-500">
+            Tax Statute 2019, Sections 2-1-38-4-0-0-21, et seq.
+          </p>
+        </div>
+
+        {/* Status Banner - Hide on print */}
+        <div className={`rounded-lg p-4 mb-6 ${statusColors[taxReturn.status]} print:hidden`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-medium">Status:</span>
@@ -84,84 +107,144 @@ export default async function IncomeTaxReturnPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Summary Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Return Summary</CardTitle>
+        {/* Taxpayer Info */}
+        <Card className="mb-6 print:shadow-none print:border">
+          <CardHeader className="print:py-2">
+            <CardTitle className="print:text-lg">Taxpayer Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="print:py-2">
+            <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-sm text-gray-500">Tax Year</p>
+                <p className="text-gray-500">Name</p>
+                <p className="font-medium">{taxReturn.user?.name || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">(e)Resident Permit Number</p>
+                <p className="font-medium">{taxReturn.user?.residentId || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Email</p>
+                <p className="font-medium">{taxReturn.user?.email || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Tax Year</p>
                 <p className="font-medium">{taxReturn.taxYear}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Creation Date</p>
-                <p className="font-medium">
-                  {new Date(taxReturn.createdAt).toLocaleDateString("en-US")}
-                </p>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">Financial Details</h4>
-
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-600">Gross Income:</span>
-                <span className="font-medium text-right">
-                  {formatCurrency(Number(taxReturn.grossIncome))}
-                </span>
-
-                <span className="text-gray-600">Presumed Income (50%):</span>
-                <span className="text-right">
-                  {formatCurrency(Number(taxReturn.presumedIncome))}
-                </span>
-
-                <span className="text-gray-600">Tax Rate:</span>
-                <span className="text-right">10%</span>
-
-                <span className="text-gray-600">Base Tax:</span>
-                <span className="text-right">
-                  {formatCurrency(Number(taxReturn.taxOwed))}
-                </span>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-gray-600">Entity Tax Credits:</span>
-                <span className="text-green-600 text-right">
-                  -{formatCurrency(Number(taxReturn.entityTaxCredits))}
-                </span>
-
-                <span className="text-gray-600">Other Credits:</span>
-                <span className="text-green-600 text-right">
-                  -{formatCurrency(Number(taxReturn.otherCredits))}
-                </span>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-2">
-                <span className="font-semibold text-lg">Total Due:</span>
-                <span className="font-bold text-xl text-right text-blue-600">
-                  {formatCurrency(Number(taxReturn.totalDue))}
-                </span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Signature Card */}
-        {taxReturn.signatureData && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Digital Signature</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-white border rounded-lg p-4">
+        {/* Income Tax Calculation - Form 1 Lines */}
+        <Card className="mb-6 print:shadow-none print:border">
+          <CardHeader className="print:py-2">
+            <CardTitle className="print:text-lg">Income Tax Calculation</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 print:py-2">
+            <div className="bg-amber-50 rounded-lg p-4 print:bg-white print:border">
+              <h4 className="font-medium text-amber-900 mb-3 print:text-black">Information Lines</h4>
+
+              <div className="space-y-3 text-sm">
+                {/* Line 1 */}
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="col-span-2 text-gray-700">
+                    <strong>Line 1:</strong> Revenue from employment (wages, salary, compensation)
+                  </span>
+                  <span className="text-right font-medium">
+                    {formatCurrency(grossIncome)}
+                  </span>
+                </div>
+
+                {/* Line 2 */}
+                <div className="grid grid-cols-3 gap-2 bg-white p-2 rounded print:bg-gray-50">
+                  <span className="col-span-2 text-gray-700">
+                    <strong>Line 2:</strong> Presumed Income from Employment
+                    <br />
+                    <span className="text-xs text-gray-500">
+                      (50% of Line 1 less ${TAX_RATES.INCOME_TAX.EMPLOYMENT_DEDUCTION.toLocaleString()}) per Sections 2-1-38-2-0-0-4
+                    </span>
+                  </span>
+                  <span className="text-right font-medium text-blue-600">
+                    {formatCurrency(presumedIncome)}
+                  </span>
+                </div>
+
+                <Separator />
+
+                {/* Line 6 */}
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="col-span-2 text-gray-700">
+                    <strong>Line 6:</strong> Aggregate Presumed Income
+                  </span>
+                  <span className="text-right font-medium">
+                    {formatCurrency(presumedIncome)}
+                  </span>
+                </div>
+
+                {/* Line 7 */}
+                <div className="grid grid-cols-3 gap-2 bg-blue-50 p-2 rounded print:bg-gray-100">
+                  <span className="col-span-2 text-gray-700">
+                    <strong>Line 7:</strong> Initial Income Tax Calculation (10% of Line 6)
+                  </span>
+                  <span className="text-right font-bold text-blue-700">
+                    {formatCurrency(taxOwed)}
+                  </span>
+                </div>
+
+                {/* Line 8 */}
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="col-span-2 text-gray-700">
+                    <strong>Line 8:</strong> Credit for Marketable Tax Credit Applied (MTC)
+                    <br />
+                    <span className="text-xs text-gray-500">Cannot exceed amount in Line 7</span>
+                  </span>
+                  <span className="text-right font-medium text-green-600">
+                    -{formatCurrency(totalCredits)}
+                  </span>
+                </div>
+
+                <Separator />
+
+                {/* Line 9 */}
+                <div className="grid grid-cols-3 gap-2 bg-gray-100 p-3 rounded">
+                  <span className="col-span-2 text-gray-900 font-semibold text-lg">
+                    <strong>Line 9:</strong> Income Tax Liability for Tax Year
+                  </span>
+                  <span className="text-right font-bold text-xl text-blue-600">
+                    {formatCurrency(totalDue)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Due Date Info */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 print:bg-white">
+              <p className="text-sm text-amber-800 print:text-black">
+                <strong>Email by April 1, {taxReturn.taxYear + 1} to Prospera Tax Commissioner:</strong> gsp@prospera.hn
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Certification & Signature */}
+        <Card className="mb-6 print:shadow-none print:border">
+          <CardHeader className="print:py-2">
+            <CardTitle className="print:text-lg">Certification</CardTitle>
+          </CardHeader>
+          <CardContent className="print:py-2">
+            {taxReturn.certificationAccepted && (
+              <div className="bg-blue-50 rounded-lg p-4 mb-4 print:bg-white print:border">
+                <p className="text-sm text-blue-800 print:text-black">
+                  I certify under penalty of perjury that the foregoing information is true, correct,
+                  and complete to the best of my knowledge. All statements applicable to the form of
+                  proof under the Prospera Civil Penalty Schedule, International Commercial Terms Inc.,
+                  Ed. 2017, are incorporated herein to the full extent applicable.
+                </p>
+              </div>
+            )}
+
+            {taxReturn.signatureData && (
+              <div className="border rounded-lg p-4">
+                <p className="text-sm text-gray-500 mb-2">Digital Signature:</p>
                 <Image
                   src={taxReturn.signatureData}
                   alt="Digital signature"
@@ -170,18 +253,18 @@ export default async function IncomeTaxReturnPage({ params }: PageProps) {
                   unoptimized
                   className="mx-auto"
                 />
+                {taxReturn.signedAt && (
+                  <p className="text-sm text-gray-500 mt-2 text-center">
+                    Signed on {new Date(taxReturn.signedAt).toLocaleString("en-US")}
+                  </p>
+                )}
               </div>
-              {taxReturn.signedAt && (
-                <p className="text-sm text-gray-500 mt-2 text-center">
-                  Signed on {new Date(taxReturn.signedAt).toLocaleString("en-US")}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Actions */}
-        <div className="flex gap-4 justify-center">
+        {/* Actions - Hide on print */}
+        <div className="flex gap-4 justify-center print:hidden">
           <DownloadPdfButton
             type="income"
             id={taxReturn.id}
