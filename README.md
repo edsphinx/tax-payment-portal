@@ -1,154 +1,259 @@
 # Próspera Tax Payment Portal
 
-A modern web-based tax filing experience for Próspera ZEDE residents, built with Next.js, shadcn/ui, and Prisma.
+> **Technical Assessment** - Senior Full-Stack Developer Position
 
-## Overview
+A modern web-based tax filing portal for e-residents, built as a technical demonstration showcasing full-stack development capabilities with Next.js 15, TypeScript, Prisma, and modern React patterns.
 
-This portal allows Próspera residents to file their taxes digitally, replacing the traditional Adobe Sign PDF forms with a streamlined, multi-step web experience.
+## About This Project
 
-### Tax Types Supported
+This project was developed as a technical assessment for a Senior Full-Stack Developer position. It demonstrates the ability to:
 
-1. **Income Tax (Annual)** - Form 1
-   - Due: April 30th yearly
-   - Effective rate: 5% of gross income
-   - Calculation: 50% of gross income deemed "presumed income", taxed at 10%
+- Build a production-ready application from scratch
+- Implement complex multi-step form workflows
+- Handle authentication and authorization
+- Design and implement database schemas
+- Create RESTful APIs with proper validation
+- Apply modern UI/UX patterns
+- Deploy to cloud infrastructure (Vercel + Supabase)
 
-2. **VAT Return (Quarterly)**
-   - Due: 15 days after each quarter end
-   - Effective rate: 2.5% of retail sales
-   - Calculation: 50% of retail sales deemed "value added", taxed at 5%
+## Live Demo
+
+**Production**: [https://tax-payment-portal.vercel.app](https://tax-payment-portal.vercel.app)
+
+## MVP Features (Completed)
+
+### Authentication System
+- Google OAuth integration
+- JWT session strategy (Edge-compatible)
+- Protected routes with middleware
+- Development mode credentials
+
+### Income Tax Return (Annual - Form 1)
+- 6-step wizard: Personal Info → Address → Income → Credits → Preparer → Review & Sign
+- Real-time tax calculations (5% effective rate)
+- Digital signature capture
+- Duplicate filing prevention (per tax year)
+- PDF download with proper filename
+
+### VAT Return (Quarterly)
+- 5-step wizard: Business Info → Period → Sales → Adjustments → Review & Sign
+- Real-time VAT calculations (2.5% effective rate)
+- Quarter selection with date range display
+- Duplicate filing prevention (per year/quarter)
+- PDF download with proper filename
+
+### Dashboard
+- Filing history with status indicators
+- Smart filing cards (shows available periods to file)
+- Disabled state when all periods are filed
+- View submitted returns with full details
+- Returns sorted by year (most recent first)
+
+### Form Validation & UX
+- Step-by-step validation with Zod schemas
+- Already-filed periods disabled in selectors
+- Warning alerts for duplicate attempts
+- Improved number input UX (auto-select on focus)
+- API-level 409 conflict handling
+
+### API & Backend
+- RESTful API routes for CRUD operations
+- Service layer pattern (IncomeTaxService, VatService)
+- Prisma ORM with PostgreSQL (Supabase)
+- Draft support with upsert logic
+- Proper error responses with status codes
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 (App Router)
-- **UI**: shadcn/ui + Tailwind CSS
-- **Forms**: React Hook Form + Zod validation
-- **Database**: Prisma ORM (PostgreSQL)
-- **Signatures**: signature_pad library
+| Category | Technology |
+|----------|------------|
+| Framework | Next.js 15.5.9 (App Router) |
+| Language | TypeScript 5 |
+| UI Components | shadcn/ui + Radix UI |
+| Styling | Tailwind CSS |
+| Forms | React Hook Form + Zod |
+| Database | Prisma ORM + Supabase (PostgreSQL) |
+| Authentication | NextAuth.js v5 (Auth.js) |
+| Signatures | signature_pad |
+| Deployment | Vercel |
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── auth/[...nextauth]/    # Auth endpoints
+│   │   └── tax/
+│   │       ├── income/            # Income tax CRUD
+│   │       ├── vat/               # VAT CRUD
+│   │       └── drafts/            # Draft management
+│   ├── auth/                      # Sign-in, error pages
+│   ├── dashboard/                 # User dashboard
+│   └── tax/
+│       ├── income/                # Income tax wizard
+│       ├── vat/                   # VAT wizard
+│       └── returns/[type]/[id]/   # Return detail views
+├── components/
+│   ├── auth/                      # SignOutButton, SessionProvider
+│   ├── dashboard/                 # TaxFilingCards, TaxReturnsList
+│   ├── forms/                     # IncomeTaxForm, VatForm, SignaturePad
+│   ├── tax/                       # DownloadPdfButton
+│   └── ui/                        # shadcn/ui components
+├── hooks/
+│   ├── use-income-tax-form.ts     # Income tax form logic
+│   └── use-vat-form.ts            # VAT form logic
+├── lib/
+│   ├── api/                       # API client & endpoints
+│   ├── services/                  # Business logic services
+│   └── tax-calculations.ts        # Tax computation functions
+├── types/                         # TypeScript definitions
+├── auth.ts                        # Full auth config (Prisma)
+├── auth.config.ts                 # Edge-compatible auth config
+└── middleware.ts                  # Route protection
+```
+
+## Tax Rates (Próspera ZEDE)
+
+| Tax Type | Presumed Base | Statutory Rate | Effective Rate |
+|----------|---------------|----------------|----------------|
+| Personal Income | 50% of gross | 10% | **5%** |
+| Retail VAT | 50% of sales | 5% | **2.5%** |
+| Capital Gains | — | — | **0%** |
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- pnpm
-- PostgreSQL database
+- pnpm (recommended) or npm
+- PostgreSQL database (Supabase recommended)
 
 ### Installation
 
 ```bash
+# Clone repository
+git clone <repository-url>
+cd tax-payment-portal
+
 # Install dependencies
 pnpm install
 
-# Copy environment file
+# Configure environment
 cp .env.example .env
+# Edit .env with your credentials
 
-# Update DATABASE_URL in .env with your PostgreSQL connection string
-
-# Generate Prisma client
+# Setup database
 pnpm db:generate
-
-# Push schema to database
 pnpm db:push
 
-# Run development server
+# Start development server
 pnpm dev
+```
+
+### Environment Variables
+
+```env
+# Database (Supabase)
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# Auth
+AUTH_SECRET="your-secret-key"
+AUTH_GOOGLE_ID="google-client-id"
+AUTH_GOOGLE_SECRET="google-client-secret"
+
 ```
 
 ### Available Scripts
 
-```bash
-pnpm dev          # Start development server
-pnpm build        # Build for production
-pnpm start        # Start production server
-pnpm lint         # Run ESLint
-pnpm db:generate  # Generate Prisma client
-pnpm db:push      # Push schema to database
-pnpm db:studio    # Open Prisma Studio
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start development server |
+| `pnpm build` | Build for production |
+| `pnpm start` | Start production server |
+| `pnpm lint` | Run ESLint |
+| `pnpm db:generate` | Generate Prisma client |
+| `pnpm db:push` | Push schema to database |
+| `pnpm db:studio` | Open Prisma Studio |
+
+## Architecture Decisions
+
+### Clean Code Principles
+The codebase follows clean code practices throughout:
+- **Presentation-only components**: UI components handle rendering only, no business logic
+- **Business logic in hooks**: Custom hooks encapsulate all form logic, calculations, and state management
+- **Service layer**: Backend operations abstracted into services for testability and reusability
+
+### Centralized Types
+All TypeScript types and interfaces are centralized in `/src/types/`:
+- Shared between frontend and backend
+- Single source of truth for data structures
+- Facilitates refactoring and maintenance
+
+### Decoupled API Architecture
+The API client (`/src/lib/api/`) is designed for backend substitution:
+- Abstract client interface that can point to internal Next.js routes or external APIs
+- `BASE_URL` environment variable for easy backend switching
+- Standardized request/response format across all endpoints
+- Ready to evolve from Next.js API routes to a dedicated backend (Node.js, Go, etc.)
+
+```typescript
+// Easy to switch from internal to external API
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 ```
 
-## Project Structure
+### Edge-Compatible Authentication
+Split auth configuration to keep middleware under Vercel's 1MB Edge Function limit:
+- `auth.config.ts` - Lightweight config for Edge Runtime (no Prisma)
+- `auth.ts` - Full config with Prisma adapter for API routes
 
-```
-tax-payment-portal/
-├── prisma/
-│   └── schema.prisma       # Database schema
-├── src/
-│   ├── app/
-│   │   ├── page.tsx        # Landing page
-│   │   └── tax/
-│   │       ├── income/     # Income tax form
-│   │       └── vat/        # VAT form
-│   ├── components/
-│   │   ├── forms/          # Tax form components
-│   │   └── ui/             # shadcn/ui components
-│   ├── lib/
-│   │   ├── db.ts           # Prisma client
-│   │   ├── utils.ts        # Utility functions
-│   │   ├── tax-calculations.ts  # Tax calculation logic
-│   │   └── validations/    # Zod schemas
-│   └── types/              # TypeScript types
-└── ...
-```
+### JWT Sessions
+Using JWT strategy instead of database sessions for:
+- Edge Runtime compatibility
+- Reduced database queries
+- Simpler session management
 
-## Design Decisions
+### Service Layer Pattern
+Business logic encapsulated in services (`IncomeTaxService`, `VatService`) for:
+- Separation of concerns
+- Testability
+- Reusability across API routes
 
-### Multi-Step Form Approach
-- Breaks complex tax forms into digestible steps
-- Reduces cognitive load for users
-- Allows step-by-step validation
-- Provides clear progress indication
+### Form State Management
+Custom hooks (`useIncomeTaxForm`, `useVatForm`) managing:
+- Multi-step navigation
+- Real-time calculations
+- Validation per step
+- Duplicate filing detection
+- API error handling (409 conflicts)
 
-### Field Grouping
-- **Personal Info**: Identity and contact details
-- **Address**: Residence information
-- **Income/Sales**: Financial data entry
-- **Credits**: Tax adjustments
-- **Review**: Summary and certification
-
-### UX Improvements over PDF Forms
-1. **Real-time calculations**: Users see tax estimates as they enter data
-2. **Inline validation**: Immediate feedback on errors
-3. **Progress tracking**: Clear indication of completion
-4. **Digital signature**: Canvas-based signature capture
-5. **Mobile-friendly**: Responsive design for all devices
-6. **Zero-filing support**: Easy submission when no income/sales
-
-## Legal Compliance
-
-The portal captures all legally required information from the original Adobe Sign forms:
-- Taxpayer identification (Resident ID)
-- Tax period selection
-- Income/sales reporting
-- Tax calculation with credits
-- Certification under penalty of perjury
-- Digital signature
-
-## Tax Rates (Próspera ZEDE)
-
-| Tax Type | Presumed Rate | Statutory Rate | Effective Rate |
-|----------|--------------|----------------|----------------|
-| Personal Income | 50% of gross | 10% | 5% |
-| Business Income | 10% of revenue | 10% | 1% |
-| Retail VAT | 50% of sales | 5% | 2.5% |
+### UX Considerations
+- Number inputs auto-select on focus for better editing experience
+- Already-filed periods disabled with clear visual indicators
+- Warning alerts prevent duplicate submissions
+- PDF downloads with professional filenames
+- Returns sorted by most recent first
 
 ## Future Enhancements
 
-- [ ] User authentication (NextAuth.js)
-- [ ] Payment integration (Stripe/Crypto)
-- [ ] PDF generation for filed returns
-- [ ] Email notifications
-- [ ] Business entity tax forms
+These features were identified but not implemented due to scope:
+
+- [ ] Payment integration (Stripe, BTCPay Server)
+- [ ] Email notifications (confirmations, reminders)
+- [ ] Draft auto-save
 - [ ] Admin dashboard
-- [ ] Tax history and amendments
+- [ ] Business entity tax forms
+- [ ] Tax amendments
+- [ ] Multi-language support (Spanish/English)
 
-## Resources
+## Author
 
-- [Próspera Tax System](https://pzgps.hn/prospera-zede-tax-system/)
-- [Filing Taxes in ePróspera](https://intercom.help/prospera-c3520d800849/en/articles/8839221-filing-taxes-in-eprospera)
-- [Tax Overview](https://intercom.help/prospera-c3520d800849/en/articles/8258630-overview-of-taxes)
+Developed by **Oscar Fonseca** as a technical assessment.
+
+- GitHub: [@edsphinx](https://github.com/edsphinx)
+- LinkedIn: [Oscar Fonseca](https://www.linkedin.com/in/ofonck/)
 
 ## License
 
-Proprietary - Próspera ZEDE
-# tax-payment-portal
+This project was created for evaluation purposes. All rights reserved.

@@ -319,7 +319,9 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
                           min="0"
                           placeholder="0.00"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ""}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormDescription>Total sales of retail goods and services. Enter 0 if none.</FormDescription>
@@ -370,7 +372,9 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
                           min="0"
                           placeholder="0.00"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ""}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormDescription>Credits carried forward from previous quarters.</FormDescription>

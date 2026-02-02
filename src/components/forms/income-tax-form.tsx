@@ -39,18 +39,29 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
   const {
     form,
     taxCalculation,
+    taxYear,
     isSubmitting,
     isSubmitted,
     submit,
     nextStep,
     prevStep,
+    isFiledYear,
+    filedYears,
+    loadingReturns,
   } = useIncomeTaxForm({
     totalSteps,
     onSuccess: () => {},
   });
 
+  // Check if current selection is already filed
+  const currentYearFiled = isFiledYear(taxYear);
+
   // Sync external step changes
   const handleNext = async () => {
+    // Don't allow proceeding if current year is already filed (from step 3)
+    if (currentStep === 3 && currentYearFiled) {
+      return;
+    }
     const isValid = await nextStep();
     if (isValid) {
       onStepChange(currentStep + 1);
@@ -286,17 +297,51 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {taxYears.map((year) => (
-                            <SelectItem key={year} value={year.toString()}>
-                              {year}
-                            </SelectItem>
-                          ))}
+                          {taxYears.map((year) => {
+                            const isFiled = isFiledYear(year);
+                            return (
+                              <SelectItem
+                                key={year}
+                                value={year.toString()}
+                                disabled={isFiled}
+                              >
+                                {year} {isFiled && "(Already filed)"}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                {currentYearFiled && (
+                  <div className="bg-red-100 border-2 border-red-500 rounded-lg p-4 animate-pulse">
+                    <div className="flex items-center gap-3 text-red-700">
+                      <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-bold text-lg">This year has already been filed!</span>
+                    </div>
+                    <p className="text-red-600 mt-2 ml-9">
+                      You cannot file again for {taxYear}. Please select a different year.
+                    </p>
+                  </div>
+                )}
+
+                {filedYears.length > 0 && (
+                  <div className="text-sm text-gray-500">
+                    <p className="font-medium mb-1">Already filed years:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {filedYears.map((year) => (
+                        <span key={year} className="px-2 py-1 bg-gray-100 rounded text-xs">
+                          {year}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <FormField
                   control={form.control}
@@ -311,7 +356,9 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                           min="0"
                           placeholder="0.00"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ""}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormDescription>Total income earned within Próspera. Enter 0 if none.</FormDescription>
@@ -362,7 +409,9 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                           min="0"
                           placeholder="0.00"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ""}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormDescription>Credits from income tax paid by legal entities you own.</FormDescription>
@@ -384,7 +433,9 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
                           min="0"
                           placeholder="0.00"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          value={field.value || ""}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -522,7 +573,11 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
             </Button>
 
             {currentStep < totalSteps ? (
-              <Button type="button" onClick={handleNext}>
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={currentStep === 3 && currentYearFiled}
+              >
                 Continue
               </Button>
             ) : (
