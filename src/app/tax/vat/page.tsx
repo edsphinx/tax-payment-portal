@@ -2,18 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { VatForm } from "@/components/forms/vat-form";
 
 const STEPS = [
-  { id: 1, name: "Taxpayer Info", description: "Your identification details" },
-  { id: 2, name: "Address", description: "Your residence details" },
-  { id: 3, name: "Tax Period", description: "Select the quarter" },
-  { id: 4, name: "Retail Sales", description: "Report sales value" },
-  { id: 5, name: "Tax Credits", description: "Marketable Trade Credit (MTC)" },
-  { id: 6, name: "Review & Sign", description: "Certify and submit" },
+  { id: 1, name: "Taxpayer Info" },
+  { id: 2, name: "Address" },
+  { id: 3, name: "Tax Period" },
+  { id: 4, name: "Retail Sales" },
+  { id: 5, name: "Credits" },
+  { id: 6, name: "Review" },
 ];
 
 export default function VatPage() {
@@ -21,75 +18,92 @@ export default function VatPage() {
   const progressPercentage = (currentStep / STEPS.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
+      <header className="bg-slate-900 text-white">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+              <span className="text-lg font-bold tracking-tight">Próspera</span>
+              <span className="text-lg font-light text-slate-400 ml-1">Tax Portal</span>
             </Link>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                Individual Retail VAT Return
-              </h1>
-              <p className="text-sm text-gray-500">Quarterly Filing</p>
-            </div>
+            <Link
+              href="/dashboard"
+              className="text-sm text-slate-400 hover:text-white transition-colors"
+            >
+              Exit
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Progress */}
-      <div className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
-              Step {currentStep} of {STEPS.length}: {STEPS[currentStep - 1].name}
-            </span>
-            <span className="text-sm text-gray-500">
-              {Math.round(progressPercentage)}% complete
-            </span>
+      {/* Title & Progress */}
+      <div className="bg-slate-50 border-b">
+        <div className="container mx-auto px-6 py-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Link
+              href="/dashboard"
+              className="text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">VAT Return</h1>
+              <p className="text-sm text-slate-600">Form 3 - Quarterly Filing</p>
+            </div>
           </div>
-          <Progress value={progressPercentage} className="h-2" />
 
-          {/* Step indicators */}
-          <div className="hidden md:flex justify-between mt-4">
-            {STEPS.map((step) => (
+          {/* Progress bar */}
+          <div className="max-w-2xl">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="font-medium text-slate-700">
+                Step {currentStep}: {STEPS[currentStep - 1].name}
+              </span>
+              <span className="text-slate-500">{Math.round(progressPercentage)}%</span>
+            </div>
+            <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
               <div
-                key={step.id}
-                className={`flex flex-col items-center ${
-                  step.id <= currentStep ? "text-green-600" : "text-gray-400"
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step.id < currentStep
-                      ? "bg-green-600 text-white"
-                      : step.id === currentStep
-                      ? "bg-green-100 text-green-600 border-2 border-green-600"
-                      : "bg-gray-100 text-gray-400"
-                  }`}
-                >
-                  {step.id < currentStep ? "✓" : step.id}
+                className="h-full bg-slate-900 transition-all duration-300"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+
+            {/* Step dots */}
+            <div className="flex justify-between mt-3">
+              {STEPS.map((step) => (
+                <div key={step.id} className="flex flex-col items-center">
+                  <div
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      step.id <= currentStep ? "bg-slate-900" : "bg-slate-300"
+                    }`}
+                  />
+                  <span className="text-xs text-slate-500 mt-1 hidden md:block">
+                    {step.name}
+                  </span>
                 </div>
-                <span className="text-xs mt-1 hidden lg:block">{step.name}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Form Content */}
-      <main className="container mx-auto px-4 py-8">
+      {/* Form */}
+      <main className="flex-1 container mx-auto px-6 py-8">
         <VatForm
           currentStep={currentStep}
           onStepChange={setCurrentStep}
           totalSteps={STEPS.length}
         />
       </main>
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white py-4">
+        <div className="container mx-auto px-6 text-center text-sm text-slate-400">
+          © {new Date().getFullYear()} Próspera ZEDE Tax Administration
+        </div>
+      </footer>
     </div>
   );
 }

@@ -55,6 +55,12 @@ export interface RandomFormData {
   entityDistributions: number;
   mtcCredit: number;
   totalRetailSales: number;
+
+  // Tax preparer info
+  preparerName: string;
+  preparerEmail: string;
+  preparerPhone: string;
+  preparerAddress: string;
 }
 
 /**
@@ -87,9 +93,11 @@ function generateResidentId(): string {
  */
 export async function fetchRandomFormData(): Promise<RandomFormData> {
   try {
-    const response = await fetch("https://randomuser.me/api/?nat=us");
+    // Fetch 2 users: one for taxpayer, one for preparer
+    const response = await fetch("https://randomuser.me/api/?nat=us&results=2");
     const data: RandomUserResponse = await response.json();
     const user = data.results[0];
+    const preparer = data.results[1];
 
     // Generate realistic tax amounts
     const employmentIncome = randomInRange(25000, 250000);
@@ -122,6 +130,11 @@ export async function fetchRandomFormData(): Promise<RandomFormData> {
       entityDistributions,
       mtcCredit,
       totalRetailSales,
+      // Tax preparer info
+      preparerName: `${preparer.name.first} ${preparer.name.last}, CPA`,
+      preparerEmail: preparer.email,
+      preparerPhone: preparer.phone,
+      preparerAddress: `${preparer.location.street.number} ${preparer.location.street.name}, ${preparer.location.city}, ${preparer.location.state} ${preparer.location.postcode}`,
     };
   } catch (error) {
     console.error("Failed to fetch random data:", error);
@@ -147,6 +160,12 @@ function generateFallbackData(): RandomFormData {
   const approximateTax = ((employmentIncome - 8000) * 0.5 + businessIncome * 0.5) * 0.1;
   const mtcCredit = Math.random() > 0.5 ? randomInRange(0, Math.min(5000, Math.floor(approximateTax))) : 0;
 
+  // Generate preparer info
+  const preparerFirstName = firstNames[randomInRange(0, firstNames.length - 1)];
+  const preparerLastName = lastNames[randomInRange(0, lastNames.length - 1)];
+  const preparerCity = cities[randomInRange(0, cities.length - 1)];
+  const preparerState = states[randomInRange(0, states.length - 1)];
+
   return {
     firstName,
     lastName,
@@ -166,5 +185,10 @@ function generateFallbackData(): RandomFormData {
     entityDistributions,
     mtcCredit,
     totalRetailSales: randomInRange(10000, 500000),
+    // Tax preparer info
+    preparerName: `${preparerFirstName} ${preparerLastName}, CPA`,
+    preparerEmail: `${preparerFirstName.toLowerCase()}.${preparerLastName.toLowerCase()}@taxfirm.com`,
+    preparerPhone: `+504 ${randomInRange(9000, 9999)}-${randomInRange(1000, 9999)}`,
+    preparerAddress: `${randomInRange(100, 9999)} Business Ave, ${preparerCity}, ${preparerState} ${randomInRange(10000, 99999)}`,
   };
 }

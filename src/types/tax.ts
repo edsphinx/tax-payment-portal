@@ -92,23 +92,55 @@ export interface IncomeTaxReturn {
 
 export interface CreateIncomeTaxInput {
   taxYear: number;
-  grossIncome: number;
+  // Taxpayer Info
+  middleInitial?: string;
+  accountingMethod?: string;
+  // Address
+  addressLine1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  // Income
+  employmentIncome: number;
+  businessIncome?: number;
+  entityDistributions?: number;
+  grossIncome?: number; // Legacy - computed from employment + business
+  // Credits
   entityTaxCredits?: number;
   otherCredits?: number;
   incomeSources?: IncomeSource[];
+  // Preparer
   preparerName?: string;
   preparerEmail?: string;
   preparerPhone?: string;
+  preparerAddress?: string;
 }
 
 export interface UpdateIncomeTaxInput {
+  // Taxpayer Info
+  middleInitial?: string;
+  accountingMethod?: string;
+  // Address
+  addressLine1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  // Income
+  employmentIncome?: number;
+  businessIncome?: number;
+  entityDistributions?: number;
   grossIncome?: number;
+  // Credits
   entityTaxCredits?: number;
   otherCredits?: number;
   incomeSources?: IncomeSource[];
+  // Preparer
   preparerName?: string;
   preparerEmail?: string;
   preparerPhone?: string;
+  preparerAddress?: string;
 }
 
 // ============================================================================
@@ -164,12 +196,34 @@ export interface VatReturn {
 export interface CreateVatInput {
   taxYear: number;
   quarter: number;
+  // Taxpayer Info
+  middleInitial?: string;
+  accountingMethod?: string;
+  // Address
+  addressLine1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  email?: string;
+  // Sales
   totalRetailSales: number;
   previousCredits?: number;
   salesBreakdown?: SalesBreakdownItem[];
 }
 
 export interface UpdateVatInput {
+  // Taxpayer Info
+  middleInitial?: string;
+  accountingMethod?: string;
+  // Address
+  addressLine1?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  email?: string;
+  // Sales
   totalRetailSales?: number;
   previousCredits?: number;
   salesBreakdown?: SalesBreakdownItem[];

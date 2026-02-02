@@ -180,24 +180,35 @@ export function useVatForm(options: UseVatFormOptions = {}) {
     try {
       let vatReturnId: string;
 
+      // Build the complete payload with all form fields
+      const createPayload = {
+        taxYear: data.taxYear,
+        quarter: data.quarter,
+        // Taxpayer Info
+        middleInitial: data.middleInitial || undefined,
+        accountingMethod: data.accountingMethod,
+        // Address
+        addressLine1: data.addressLine1,
+        city: data.city,
+        state: data.state,
+        postalCode: data.postalCode,
+        country: data.country,
+        email: data.email,
+        // Sales
+        totalRetailSales: data.totalRetailSales,
+        previousCredits: data.mtcCredit,
+        salesBreakdown: data.salesBreakdown,
+      };
+
       try {
         // Try to create a new return
-        const created = await vatApi.create({
-          taxYear: data.taxYear,
-          quarter: data.quarter,
-          totalRetailSales: data.totalRetailSales,
-          previousCredits: data.mtcCredit,
-          salesBreakdown: data.salesBreakdown,
-        });
+        const created = await vatApi.create(createPayload);
         vatReturnId = created.id;
       } catch (createError) {
         // If return already exists (409), update it instead
         if (createError instanceof ApiError && createError.status === 409 && createError.existingId) {
-          await vatApi.update(createError.existingId, {
-            totalRetailSales: data.totalRetailSales,
-            previousCredits: data.mtcCredit,
-            salesBreakdown: data.salesBreakdown,
-          });
+          const { taxYear: _taxYear, quarter: _quarter, ...updatePayload } = createPayload;
+          await vatApi.update(createError.existingId, updatePayload);
           vatReturnId = createError.existingId;
         } else {
           throw createError;

@@ -5,7 +5,21 @@ import { z } from "zod";
 import type { UpdateIncomeTaxInput } from "@/types";
 
 const updateSchema = z.object({
+  // Taxpayer Info
+  middleInitial: z.string().max(1).optional(),
+  accountingMethod: z.enum(["CASH", "ACCRUAL"]).optional(),
+  // Address
+  addressLine1: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+  // Income
+  employmentIncome: z.number().min(0).optional(),
+  businessIncome: z.number().min(0).optional(),
+  entityDistributions: z.number().min(0).optional(),
   grossIncome: z.number().min(0).optional(),
+  // Credits
   entityTaxCredits: z.number().min(0).optional(),
   otherCredits: z.number().min(0).optional(),
   incomeSources: z.array(z.object({
@@ -13,9 +27,11 @@ const updateSchema = z.object({
     amount: z.number(),
     description: z.string().optional(),
   })).optional(),
+  // Preparer
   preparerName: z.string().optional(),
   preparerEmail: z.string().email().optional().or(z.literal("")),
   preparerPhone: z.string().optional(),
+  preparerAddress: z.string().optional(),
 });
 
 interface RouteParams {

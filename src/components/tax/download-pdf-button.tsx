@@ -1,7 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-
 interface DownloadPdfButtonProps {
   type: "income" | "vat";
   id: string;
@@ -36,7 +34,10 @@ export function DownloadPdfButton({ type, id, year, quarter }: DownloadPdfButton
   };
 
   return (
-    <Button onClick={handleDownload} className="gap-2">
+    <button
+      onClick={handleDownload}
+      className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded font-medium hover:bg-slate-800 transition-colors"
+    >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
@@ -46,6 +47,6 @@ export function DownloadPdfButton({ type, id, year, quarter }: DownloadPdfButton
         />
       </svg>
       Download PDF
-    </Button>
+    </button>
   );
 }

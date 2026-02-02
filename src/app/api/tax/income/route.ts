@@ -6,17 +6,33 @@ import type { CreateIncomeTaxInput } from "@/types";
 
 const createSchema = z.object({
   taxYear: z.number().int().min(2020).max(2030),
-  grossIncome: z.number().min(0),
-  entityTaxCredits: z.number().min(0).optional(),
-  otherCredits: z.number().min(0).optional(),
+  // Taxpayer Info
+  middleInitial: z.string().max(1).optional(),
+  accountingMethod: z.enum(["CASH", "ACCRUAL"]).optional(),
+  // Address
+  addressLine1: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+  // Income
+  employmentIncome: z.number().min(0),
+  businessIncome: z.number().min(0).optional().default(0),
+  entityDistributions: z.number().min(0).optional().default(0),
+  grossIncome: z.number().min(0).optional(), // Legacy field
+  // Credits
+  entityTaxCredits: z.number().min(0).optional().default(0),
+  otherCredits: z.number().min(0).optional().default(0),
   incomeSources: z.array(z.object({
     source: z.string(),
     amount: z.number(),
     description: z.string().optional(),
   })).optional(),
+  // Preparer
   preparerName: z.string().optional(),
   preparerEmail: z.string().email().optional().or(z.literal("")),
   preparerPhone: z.string().optional(),
+  preparerAddress: z.string().optional(),
 });
 
 export async function GET() {

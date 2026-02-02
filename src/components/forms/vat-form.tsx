@@ -22,11 +22,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useVatForm } from "@/hooks";
+import { fillVatForm } from "@/hooks/use-fill-form";
 import { formatCurrency, getQuarterDates, VAT_PAYMENT_INFO } from "@/lib/tax-calculations";
 import { ACCOUNTING_METHODS } from "@/types";
 import { SignaturePad } from "./signature-pad";
 import { FillFormButton } from "@/components/ui/fill-form-button";
-import type { RandomFormData } from "@/lib/random-data";
 import { format } from "date-fns";
 
 const currentYear = new Date().getFullYear();
@@ -83,22 +83,12 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
   const totalRetailSales = form.watch("totalRetailSales") || 0;
   const mtcCredit = form.watch("mtcCredit") || 0;
   const quarterDates = getQuarterDates(taxYear, quarter);
+  const signatureData = form.watch("signatureData");
+  const certificationAccepted = form.watch("certificationAccepted");
 
   // Handler for filling form with random test data
-  const handleFillForm = (data: RandomFormData) => {
-    form.setValue("firstName", data.firstName);
-    form.setValue("lastName", data.lastName);
-    form.setValue("middleInitial", data.middleInitial);
-    form.setValue("email", data.email);
-    form.setValue("residentId", data.residentId);
-    form.setValue("addressLine1", data.addressLine1);
-    form.setValue("city", data.city);
-    form.setValue("state", data.state);
-    form.setValue("postalCode", data.postalCode);
-    form.setValue("country", data.country);
-    form.setValue("totalRetailSales", data.totalRetailSales);
-    form.setValue("mtcCredit", 0); // Reset MTC since it depends on calculation
-    form.setValue("accountingMethod", "CASH");
+  const handleFillForm = (data: import("@/lib/random-data").RandomFormData) => {
+    fillVatForm(form, data);
   };
 
   if (isSubmitted) {
@@ -723,24 +713,38 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
           )}
 
           {/* Navigation */}
-          <div className="flex justify-between p-6 pt-0">
-            <Button type="button" variant="outline" onClick={handleBack} disabled={currentStep === 1}>
-              Back
-            </Button>
-
-            {currentStep < totalSteps ? (
-              <Button
-                type="button"
-                onClick={handleNext}
-                disabled={currentStep === 3 && currentPeriodFiled}
-              >
-                Continue
-              </Button>
-            ) : (
-              <Button type="submit" disabled={isSubmitting || !form.getValues("certificationAccepted")}>
-                {isSubmitting ? "Submitting..." : "Submit Return"}
-              </Button>
+          <div className="flex flex-col gap-2 p-6 pt-0">
+            {currentStep === totalSteps && (!certificationAccepted || !signatureData) && (
+              <p className="text-sm text-amber-600 text-center">
+                {!certificationAccepted && !signatureData
+                  ? "Please accept the certification and provide your signature to submit."
+                  : !certificationAccepted
+                    ? "Please accept the certification to submit."
+                    : "Please provide your signature to submit."}
+              </p>
             )}
+            <div className="flex justify-between">
+              <Button type="button" variant="outline" onClick={handleBack} disabled={currentStep === 1}>
+                Back
+              </Button>
+
+              {currentStep < totalSteps ? (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={currentStep === 3 && currentPeriodFiled}
+                >
+                  Continue
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !certificationAccepted || !signatureData}
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Return"}
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
       </form>

@@ -7,8 +7,19 @@ import type { CreateVatInput } from "@/types";
 const createSchema = z.object({
   taxYear: z.number().int().min(2020).max(2030),
   quarter: z.number().int().min(1).max(4),
+  // Taxpayer Info
+  middleInitial: z.string().max(1).optional(),
+  accountingMethod: z.enum(["CASH", "ACCRUAL"]).optional(),
+  // Address
+  addressLine1: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  // Sales
   totalRetailSales: z.number().min(0),
-  previousCredits: z.number().min(0).optional(),
+  previousCredits: z.number().min(0).optional().default(0),
   salesBreakdown: z.array(z.object({
     category: z.string(),
     amount: z.number(),

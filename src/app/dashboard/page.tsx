@@ -15,130 +15,111 @@ export default async function DashboardPage() {
   const userName = session.user.firstName || session.user.name || session.user.email?.split("@")[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation - matches landing page */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-border print:hidden">
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="bg-slate-900 text-white print:hidden">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-ocean-500 to-ocean-600 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <span className="font-semibold text-lg text-foreground">Próspera</span>
-                <span className="text-muted-foreground ml-1">Tax Portal</span>
-              </div>
+            <Link href="/" className="hover:opacity-80 transition-opacity">
+              <span className="text-lg font-bold tracking-tight">Próspera</span>
+              <span className="text-lg font-light text-slate-400 ml-1">Tax Portal</span>
             </Link>
             <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-muted/50">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center text-white font-medium text-sm">
-                  {userName?.charAt(0).toUpperCase()}
-                </div>
-                <span className="text-sm font-medium text-foreground">{userName}</span>
+              <div className="hidden md:flex items-center gap-2 text-sm">
+                <span className="text-slate-400">Signed in as</span>
+                <span className="font-medium">{userName}</span>
               </div>
               <SignOutButton />
             </div>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-28 pb-12 overflow-hidden">
-        <div className="absolute inset-0 hero-gradient" />
-        <div className="absolute top-20 left-10 w-72 h-72 bg-ocean-400/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-coral-400/10 rounded-full blur-3xl" />
-
-        <div className="container mx-auto px-6 relative">
-          <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ocean-50 text-ocean-700 text-sm font-medium mb-4">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Welcome back, {userName}</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Your Tax Dashboard
+      <main>
+        {/* Welcome Section */}
+        <section className="bg-slate-50 border-b py-8">
+          <div className="container mx-auto px-6">
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">
+              Welcome, {userName}
             </h1>
-            <p className="text-lg text-muted-foreground">
-              Manage your tax filings and view your submission history.
+            <p className="text-slate-600">
+              Manage your tax filings and view submission history.
             </p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Quick Actions */}
-      <section className="py-8 -mt-4">
-        <div className="container mx-auto px-6">
-          <TaxFilingCards />
-        </div>
-      </section>
+        {/* Quick Actions */}
+        <section className="py-8 border-b">
+          <div className="container mx-auto px-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-6">File a Return</h2>
+            <TaxFilingCards />
+          </div>
+        </section>
 
-      {/* Filing History */}
-      <section className="py-8">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold text-foreground">Filing History</h2>
-                <p className="text-sm text-muted-foreground">Your previous tax submissions</p>
+        {/* Filing History */}
+        <section className="py-8">
+          <div className="container mx-auto px-6">
+            <div className="max-w-4xl">
+              <h2 className="text-lg font-semibold text-slate-900 mb-1">Filing History</h2>
+              <p className="text-sm text-slate-600 mb-6">Your previous tax submissions</p>
+              <div className="border rounded-lg overflow-hidden">
+                <TaxReturnsList />
               </div>
-            </div>
-            <div className="rounded-2xl border border-border bg-white/60 backdrop-blur-sm shadow-luxury overflow-hidden">
-              <TaxReturnsList />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Profile Section */}
-      <section className="py-8 pb-16">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl">
-            <div className="p-6 rounded-2xl border border-border bg-white/60 backdrop-blur-sm shadow-luxury">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center text-white font-bold text-2xl">
-                  {userName?.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-foreground">{userName}</h3>
-                  <p className="text-sm text-muted-foreground">{session.user.email}</p>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-muted/30">
-                  <div className="text-xs text-muted-foreground mb-1">Email</div>
-                  <div className="font-medium text-foreground">{session.user.email}</div>
-                </div>
-                <div className="p-4 rounded-xl bg-muted/30">
-                  <div className="text-xs text-muted-foreground mb-1">Resident ID</div>
-                  <div className="font-medium text-foreground">
-                    {session.user.residentId || (
-                      <span className="text-amber-600 text-sm">Not configured</span>
-                    )}
+        {/* Account Info */}
+        <section className="py-8 bg-slate-50 border-t">
+          <div className="container mx-auto px-6">
+            <div className="max-w-4xl">
+              <h2 className="text-lg font-semibold text-slate-900 mb-4">Account Information</h2>
+              <div className="bg-white border rounded-lg p-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Email</div>
+                    <div className="font-medium text-slate-900">{session.user.email}</div>
                   </div>
-                </div>
-              </div>
-
-              {!session.user.residentId && (
-                <div className="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
-                  <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-medium text-amber-800">Complete your profile</p>
-                      <p className="text-xs text-amber-600">Add your Próspera Resident ID to file taxes.</p>
+                  <div>
+                    <div className="text-xs text-slate-500 mb-1">Resident ID</div>
+                    <div className="font-medium text-slate-900">
+                      {session.user.residentId || (
+                        <span className="text-amber-600 text-sm">Not configured</span>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
+
+                {!session.user.residentId && (
+                  <div className="mt-4 p-4 rounded bg-amber-50 border border-amber-200">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <p className="text-sm font-medium text-amber-800">Complete your profile</p>
+                        <p className="text-xs text-amber-700">Your Resident ID will be captured when you file your first return.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white py-6 print:hidden">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-400">
+            <span>© {new Date().getFullYear()} Próspera ZEDE Tax Administration</span>
+            <a href="mailto:gsp@prospera.hn" className="hover:text-white transition-colors">
+              gsp@prospera.hn
+            </a>
+          </div>
         </div>
-      </section>
+      </footer>
     </div>
   );
 }

@@ -22,11 +22,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useIncomeTaxForm } from "@/hooks";
+import { fillIncomeTaxForm } from "@/hooks/use-fill-form";
 import { formatCurrency } from "@/lib/tax-calculations";
 import { TAX_RATES, ACCOUNTING_METHODS } from "@/types";
 import { SignaturePad } from "./signature-pad";
 import { FillFormButton } from "@/components/ui/fill-form-button";
-import type { RandomFormData } from "@/lib/random-data";
 
 const currentYear = new Date().getFullYear();
 const taxYears = [currentYear - 1, currentYear - 2, currentYear - 3];
@@ -77,24 +77,12 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
   const businessIncome = form.watch("businessIncome") || 0;
   const entityDistributions = form.watch("entityDistributions") || 0;
   const mtcCredit = form.watch("mtcCredit") || 0;
+  const signatureData = form.watch("signatureData");
+  const certificationAccepted = form.watch("certificationAccepted");
 
   // Handler for filling form with random test data
-  const handleFillForm = (data: RandomFormData) => {
-    form.setValue("firstName", data.firstName);
-    form.setValue("lastName", data.lastName);
-    form.setValue("middleInitial", data.middleInitial);
-    form.setValue("email", data.email);
-    form.setValue("residentId", data.residentId);
-    form.setValue("addressLine1", data.addressLine1);
-    form.setValue("city", data.city);
-    form.setValue("state", data.state);
-    form.setValue("postalCode", data.postalCode);
-    form.setValue("country", data.country);
-    form.setValue("employmentIncome", data.employmentIncome);
-    form.setValue("businessIncome", data.businessIncome);
-    form.setValue("entityDistributions", data.entityDistributions);
-    form.setValue("mtcCredit", data.mtcCredit);
-    form.setValue("accountingMethod", "CASH");
+  const handleFillForm = (data: import("@/lib/random-data").RandomFormData) => {
+    fillIncomeTaxForm(form, data);
   };
 
   if (isSubmitted) {
@@ -775,24 +763,38 @@ export function IncomeTaxForm({ currentStep, onStepChange, totalSteps }: IncomeT
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between p-6 pt-0">
-            <Button type="button" variant="outline" onClick={handleBack} disabled={currentStep === 1}>
-              Back
-            </Button>
-
-            {currentStep < totalSteps ? (
-              <Button
-                type="button"
-                onClick={handleNext}
-                disabled={currentStep === 3 && currentYearFiled}
-              >
-                Continue
-              </Button>
-            ) : (
-              <Button type="submit" disabled={isSubmitting || !form.getValues("certificationAccepted")}>
-                {isSubmitting ? "Submitting..." : "Submit Return"}
-              </Button>
+          <div className="flex flex-col gap-2 p-6 pt-0">
+            {currentStep === totalSteps && (!certificationAccepted || !signatureData) && (
+              <p className="text-sm text-amber-600 text-center">
+                {!certificationAccepted && !signatureData
+                  ? "Please accept the certification and provide your signature to submit."
+                  : !certificationAccepted
+                    ? "Please accept the certification to submit."
+                    : "Please provide your signature to submit."}
+              </p>
             )}
+            <div className="flex justify-between">
+              <Button type="button" variant="outline" onClick={handleBack} disabled={currentStep === 1}>
+                Back
+              </Button>
+
+              {currentStep < totalSteps ? (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={currentStep === 3 && currentYearFiled}
+                >
+                  Continue
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !certificationAccepted || !signatureData}
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Return"}
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
       </form>

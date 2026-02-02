@@ -5,6 +5,17 @@ import { z } from "zod";
 import type { UpdateVatInput } from "@/types";
 
 const updateSchema = z.object({
+  // Taxpayer Info
+  middleInitial: z.string().max(1).optional(),
+  accountingMethod: z.enum(["CASH", "ACCRUAL"]).optional(),
+  // Address
+  addressLine1: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  // Sales
   totalRetailSales: z.number().min(0).optional(),
   previousCredits: z.number().min(0).optional(),
   salesBreakdown: z.array(z.object({

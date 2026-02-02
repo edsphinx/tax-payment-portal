@@ -27,12 +27,29 @@ export class VatService {
   }
 
   static async create(userId: string, input: CreateVatInput) {
-    const { taxYear, quarter, totalRetailSales, previousCredits = 0, salesBreakdown, ...rest } = input;
+    const {
+      taxYear,
+      quarter,
+      // Taxpayer Info
+      middleInitial,
+      accountingMethod,
+      // Address
+      addressLine1,
+      city,
+      state,
+      postalCode,
+      country,
+      email,
+      // Sales
+      totalRetailSales,
+      previousCredits = 0,
+      salesBreakdown,
+    } = input;
 
     // Use updated calculation function with MTC credit
     const calculation = calculateVat({
       totalRetailSales,
-      mtcCredit: previousCredits, // Map previousCredits to mtcCredit
+      mtcCredit: previousCredits,
     });
 
     const { start: periodStart, end: periodEnd } = getQuarterDates(taxYear, quarter);
@@ -44,14 +61,26 @@ export class VatService {
         quarter,
         periodStart,
         periodEnd,
+        // Taxpayer Info
+        middleInitial,
+        accountingMethod,
+        // Address
+        addressLine1,
+        city,
+        state,
+        postalCode,
+        country,
+        email: email || undefined,
+        // Sales & Tax
         totalRetailSales,
         valueAdded: calculation.valueAdded,
         vatOwed: calculation.initialVat,
         previousCredits,
         totalDue: calculation.totalDue,
+        // Status
         status: TaxReturnStatus.DRAFT,
+        // Breakdown
         salesBreakdown: salesBreakdown as unknown as Prisma.InputJsonValue | undefined,
-        ...rest,
       },
     });
   }
@@ -68,33 +97,36 @@ export class VatService {
 
     const { salesBreakdown, ...restInput } = input;
 
-    let calculationData = {};
+    // Build update data
+    const updateData: Prisma.VatReturnUpdateInput = {
+      ...restInput,
+    };
+
+    // Handle sales breakdown JSON field
+    if (salesBreakdown !== undefined) {
+      updateData.salesBreakdown = salesBreakdown as unknown as Prisma.InputJsonValue;
+    }
+
+    // Recalculate if sales or credits changed
     if (input.totalRetailSales !== undefined || input.previousCredits !== undefined) {
       const totalRetailSales = input.totalRetailSales ?? Number(existing.totalRetailSales);
       const previousCredits = input.previousCredits ?? Number(existing.previousCredits);
 
-      // Use updated calculation function with MTC credit
       const calculation = calculateVat({
         totalRetailSales,
         mtcCredit: previousCredits,
       });
 
-      calculationData = {
-        totalRetailSales,
-        valueAdded: calculation.valueAdded,
-        vatOwed: calculation.initialVat,
-        previousCredits,
-        totalDue: calculation.totalDue,
-      };
+      updateData.totalRetailSales = totalRetailSales;
+      updateData.valueAdded = calculation.valueAdded;
+      updateData.vatOwed = calculation.initialVat;
+      updateData.previousCredits = previousCredits;
+      updateData.totalDue = calculation.totalDue;
     }
 
     return db.vatReturn.update({
       where: { id },
-      data: {
-        ...restInput,
-        ...calculationData,
-        ...(salesBreakdown !== undefined && { salesBreakdown: salesBreakdown as unknown as Prisma.InputJsonValue }),
-      },
+      data: updateData,
     });
   }
 

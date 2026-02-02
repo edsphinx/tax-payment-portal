@@ -199,34 +199,42 @@ export function useIncomeTaxForm(options: UseIncomeTaxFormOptions = {}) {
     try {
       let taxReturnId: string;
 
-      // Calculate total gross income for API compatibility
-      const grossIncome = data.employmentIncome + data.businessIncome;
+      // Build the complete payload with all form fields
+      const createPayload = {
+        taxYear: data.taxYear,
+        // Taxpayer Info
+        middleInitial: data.middleInitial || undefined,
+        accountingMethod: data.accountingMethod,
+        // Address
+        addressLine1: data.addressLine1,
+        city: data.city,
+        state: data.state,
+        postalCode: data.postalCode,
+        country: data.country,
+        // Income
+        employmentIncome: data.employmentIncome,
+        businessIncome: data.businessIncome,
+        entityDistributions: data.entityDistributions,
+        // Credits
+        entityTaxCredits: data.mtcCredit,
+        otherCredits: 0,
+        incomeSources: data.incomeSources,
+        // Preparer
+        preparerName: data.useTaxPreparer ? data.preparerName : undefined,
+        preparerEmail: data.useTaxPreparer ? data.preparerEmail : undefined,
+        preparerPhone: data.useTaxPreparer ? data.preparerPhone : undefined,
+        preparerAddress: data.useTaxPreparer ? data.preparerAddress : undefined,
+      };
 
       try {
         // Try to create a new return
-        const created = await incomeTaxApi.create({
-          taxYear: data.taxYear,
-          grossIncome: grossIncome,
-          entityTaxCredits: data.mtcCredit,
-          otherCredits: 0,
-          incomeSources: data.incomeSources,
-          preparerName: data.useTaxPreparer ? data.preparerName : undefined,
-          preparerEmail: data.useTaxPreparer ? data.preparerEmail : undefined,
-          preparerPhone: data.useTaxPreparer ? data.preparerPhone : undefined,
-        });
+        const created = await incomeTaxApi.create(createPayload);
         taxReturnId = created.id;
       } catch (createError) {
         // If return already exists (409), update it instead
         if (createError instanceof ApiError && createError.status === 409 && createError.existingId) {
-          await incomeTaxApi.update(createError.existingId, {
-            grossIncome: grossIncome,
-            entityTaxCredits: data.mtcCredit,
-            otherCredits: 0,
-            incomeSources: data.incomeSources,
-            preparerName: data.useTaxPreparer ? data.preparerName : undefined,
-            preparerEmail: data.useTaxPreparer ? data.preparerEmail : undefined,
-            preparerPhone: data.useTaxPreparer ? data.preparerPhone : undefined,
-          });
+          const { taxYear: _taxYear, ...updatePayload } = createPayload;
+          await incomeTaxApi.update(createError.existingId, updatePayload);
           taxReturnId = createError.existingId;
         } else {
           throw createError;

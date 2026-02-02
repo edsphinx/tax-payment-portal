@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { fetchRandomFormData, type RandomFormData } from "@/lib/random-data";
+import { useFillForm } from "@/hooks/use-fill-form";
+import type { RandomFormData } from "@/lib/random-data";
 
 interface FillFormButtonProps {
   onDataFetched: (data: RandomFormData) => void;
@@ -10,20 +10,14 @@ interface FillFormButtonProps {
 
 /**
  * Discreet button to fill form with random test data
- * Only visible in development or when explicitly enabled
  */
 export function FillFormButton({ onDataFetched, className = "" }: FillFormButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, fetchData } = useFillForm();
 
   const handleFill = async () => {
-    setIsLoading(true);
-    try {
-      const data = await fetchRandomFormData();
+    const data = await fetchData();
+    if (data) {
       onDataFetched(data);
-    } catch (error) {
-      console.error("Failed to fetch random data:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 

@@ -27,31 +27,77 @@ export class IncomeTaxService {
   }
 
   static async create(userId: string, input: CreateIncomeTaxInput) {
-    const { taxYear, grossIncome, entityTaxCredits = 0, otherCredits = 0, incomeSources, ...rest } = input;
+    const {
+      taxYear,
+      // Taxpayer Info
+      middleInitial,
+      accountingMethod,
+      // Address
+      addressLine1,
+      city,
+      state,
+      postalCode,
+      country,
+      // Income
+      employmentIncome,
+      businessIncome = 0,
+      entityDistributions = 0,
+      // Credits
+      entityTaxCredits = 0,
+      otherCredits = 0,
+      incomeSources,
+      // Preparer
+      preparerName,
+      preparerEmail,
+      preparerPhone,
+      preparerAddress,
+    } = input;
 
-    // For backward compatibility, treat grossIncome as employment income
-    // The new form separates employmentIncome and businessIncome, but the API still uses grossIncome
+    // Calculate tax using proper income breakdown
     const calculation = calculateIncomeTax({
-      employmentIncome: grossIncome, // Treat as employment income for now
-      businessIncome: 0,
-      entityDistributions: 0,
-      mtcCredit: entityTaxCredits + otherCredits, // Combine credits as MTC
+      employmentIncome,
+      businessIncome,
+      entityDistributions,
+      mtcCredit: entityTaxCredits + otherCredits,
     });
+
+    // grossIncome is the sum of all income for legacy compatibility
+    const grossIncome = employmentIncome + businessIncome;
 
     return db.incomeTaxReturn.create({
       data: {
         userId,
         taxYear,
+        // Taxpayer Info
+        middleInitial,
+        accountingMethod,
+        // Address
+        addressLine1,
+        city,
+        state,
+        postalCode,
+        country,
+        // Income
+        employmentIncome,
+        businessIncome,
+        entityDistributions,
         grossIncome,
         presumedIncome: calculation.aggregatePresumedIncome,
         taxableIncome: calculation.aggregatePresumedIncome,
         taxOwed: calculation.initialTax,
+        // Credits
         entityTaxCredits,
         otherCredits,
         totalDue: calculation.totalDue,
+        // Status
         status: TaxReturnStatus.DRAFT,
+        // Sources
         incomeSources: incomeSources as unknown as Prisma.InputJsonValue | undefined,
-        ...rest,
+        // Preparer
+        preparerName,
+        preparerEmail: preparerEmail || undefined,
+        preparerPhone,
+        preparerAddress,
       },
     });
   }
@@ -68,38 +114,52 @@ export class IncomeTaxService {
 
     const { incomeSources, ...restInput } = input;
 
-    let calculationData = {};
-    if (input.grossIncome !== undefined || input.entityTaxCredits !== undefined || input.otherCredits !== undefined) {
-      const grossIncome = input.grossIncome ?? Number(existing.grossIncome);
+    // Build the update data
+    const updateData: Prisma.IncomeTaxReturnUpdateInput = {
+      ...restInput,
+    };
+
+    // Handle income sources JSON field
+    if (incomeSources !== undefined) {
+      updateData.incomeSources = incomeSources as unknown as Prisma.InputJsonValue;
+    }
+
+    // Recalculate if any income or credit fields changed
+    const incomeChanged = input.employmentIncome !== undefined ||
+                          input.businessIncome !== undefined ||
+                          input.entityDistributions !== undefined ||
+                          input.entityTaxCredits !== undefined ||
+                          input.otherCredits !== undefined;
+
+    if (incomeChanged) {
+      const employmentIncome = input.employmentIncome ?? Number(existing.employmentIncome);
+      const businessIncome = input.businessIncome ?? Number(existing.businessIncome);
+      const entityDistributions = input.entityDistributions ?? Number(existing.entityDistributions);
       const entityTaxCredits = input.entityTaxCredits ?? Number(existing.entityTaxCredits);
       const otherCredits = input.otherCredits ?? Number(existing.otherCredits);
 
-      // For backward compatibility, treat grossIncome as employment income
       const calculation = calculateIncomeTax({
-        employmentIncome: grossIncome,
-        businessIncome: 0,
-        entityDistributions: 0,
+        employmentIncome,
+        businessIncome,
+        entityDistributions,
         mtcCredit: entityTaxCredits + otherCredits,
       });
 
-      calculationData = {
-        grossIncome,
-        presumedIncome: calculation.aggregatePresumedIncome,
-        taxableIncome: calculation.aggregatePresumedIncome,
-        taxOwed: calculation.initialTax,
-        entityTaxCredits,
-        otherCredits,
-        totalDue: calculation.totalDue,
-      };
+      updateData.employmentIncome = employmentIncome;
+      updateData.businessIncome = businessIncome;
+      updateData.entityDistributions = entityDistributions;
+      updateData.grossIncome = employmentIncome + businessIncome;
+      updateData.presumedIncome = calculation.aggregatePresumedIncome;
+      updateData.taxableIncome = calculation.aggregatePresumedIncome;
+      updateData.taxOwed = calculation.initialTax;
+      updateData.entityTaxCredits = entityTaxCredits;
+      updateData.otherCredits = otherCredits;
+      updateData.totalDue = calculation.totalDue;
     }
 
     return db.incomeTaxReturn.update({
       where: { id },
-      data: {
-        ...restInput,
-        ...calculationData,
-        ...(incomeSources !== undefined && { incomeSources: incomeSources as unknown as Prisma.InputJsonValue }),
-      },
+      data: updateData,
     });
   }
 
