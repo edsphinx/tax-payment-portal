@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { incomeTaxApi, vatApi } from "@/lib/api";
 import type { IncomeTaxReturn, VatReturn } from "@/types";
 
 const currentYear = new Date().getFullYear();
@@ -18,29 +16,12 @@ for (const year of [currentYear, currentYear - 1]) {
   }
 }
 
-export function TaxFilingCards() {
-  const [incomeReturns, setIncomeReturns] = useState<IncomeTaxReturn[]>([]);
-  const [vatReturns, setVatReturns] = useState<VatReturn[]>([]);
-  const [loading, setLoading] = useState(true);
+interface TaxFilingCardsProps {
+  incomeReturns: IncomeTaxReturn[];
+  vatReturns: VatReturn[];
+}
 
-  useEffect(() => {
-    async function fetchReturns() {
-      try {
-        const [income, vat] = await Promise.all([
-          incomeTaxApi.getAll(),
-          vatApi.getAll(),
-        ]);
-        setIncomeReturns(income);
-        setVatReturns(vat);
-      } catch (error) {
-        console.error("Error fetching returns:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchReturns();
-  }, []);
-
+export function TaxFilingCards({ incomeReturns, vatReturns }: TaxFilingCardsProps) {
   // Calculate available income tax years (not filed or only drafts)
   const filedIncomeYears = incomeReturns
     .filter((r) => r.status !== "DRAFT")
@@ -61,15 +42,6 @@ export function TaxFilingCards() {
 
   const hasAvailableIncome = availableIncomeYears.length > 0;
   const hasAvailableVat = availableVatPeriods.length > 0;
-
-  if (loading) {
-    return (
-      <div className="grid md:grid-cols-2 gap-4 max-w-3xl">
-        <div className="h-32 rounded-lg border bg-slate-50 animate-pulse" />
-        <div className="h-32 rounded-lg border bg-slate-50 animate-pulse" />
-      </div>
-    );
-  }
 
   return (
     <div className="grid md:grid-cols-2 gap-4 max-w-3xl">

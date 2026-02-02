@@ -4,13 +4,21 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/auth/signout-button";
 import { TaxReturnsList } from "@/components/dashboard/tax-returns-list";
 import { TaxFilingCards } from "@/components/dashboard/tax-filing-cards";
+import { IncomeTaxService } from "@/lib/services/income-tax.service";
+import { VatService } from "@/lib/services/vat.service";
 
 export default async function DashboardPage() {
   const session = await auth();
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect("/auth/signin");
   }
+
+  // Fetch data server-side in parallel
+  const [incomeReturns, vatReturns] = await Promise.all([
+    IncomeTaxService.getByUserId(session.user.id),
+    VatService.getByUserId(session.user.id),
+  ]);
 
   const userName = session.user.firstName || session.user.name || session.user.email?.split("@")[0];
 
@@ -52,7 +60,10 @@ export default async function DashboardPage() {
         <section className="py-8 border-b">
           <div className="container mx-auto px-6">
             <h2 className="text-lg font-semibold text-slate-900 mb-6">File a Return</h2>
-            <TaxFilingCards />
+            <TaxFilingCards
+              incomeReturns={JSON.parse(JSON.stringify(incomeReturns))}
+              vatReturns={JSON.parse(JSON.stringify(vatReturns))}
+            />
           </div>
         </section>
 
@@ -63,7 +74,10 @@ export default async function DashboardPage() {
               <h2 className="text-lg font-semibold text-slate-900 mb-1">Filing History</h2>
               <p className="text-sm text-slate-600 mb-6">Your previous tax submissions</p>
               <div className="border rounded-lg overflow-hidden">
-                <TaxReturnsList />
+                <TaxReturnsList
+                  incomeReturns={JSON.parse(JSON.stringify(incomeReturns))}
+                  vatReturns={JSON.parse(JSON.stringify(vatReturns))}
+                />
               </div>
             </div>
           </div>

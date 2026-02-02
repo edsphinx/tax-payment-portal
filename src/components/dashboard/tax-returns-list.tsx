@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
-import { incomeTaxApi, vatApi } from "@/lib/api";
 import { formatCurrency } from "@/lib/tax-calculations";
 import type { IncomeTaxReturn, VatReturn } from "@/types";
 
@@ -24,61 +23,28 @@ const statusLabels: Record<string, string> = {
   REJECTED: "Rejected",
 };
 
-export function TaxReturnsList() {
-  const [returns, setReturns] = useState<TaxReturn[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface TaxReturnsListProps {
+  incomeReturns: IncomeTaxReturn[];
+  vatReturns: VatReturn[];
+}
 
-  useEffect(() => {
-    async function fetchReturns() {
-      try {
-        const [incomeReturns, vatReturns] = await Promise.all([
-          incomeTaxApi.getAll(),
-          vatApi.getAll(),
-        ]);
-
-        const allReturns: TaxReturn[] = [
-          ...incomeReturns.map((r) => ({ ...r, type: "income" as const })),
-          ...vatReturns.map((r) => ({ ...r, type: "vat" as const })),
-        ].sort((a, b) => {
-          // Sort by year first (most recent first)
-          if (b.taxYear !== a.taxYear) {
-            return b.taxYear - a.taxYear;
-          }
-          // For VAT returns, sort by quarter (most recent first)
-          const aQuarter = a.type === "vat" ? (a as VatReturn & { type: "vat" }).quarter : 4;
-          const bQuarter = b.type === "vat" ? (b as VatReturn & { type: "vat" }).quarter : 4;
-          return bQuarter - aQuarter;
-        });
-
-        setReturns(allReturns);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Error loading tax returns");
-      } finally {
-        setLoading(false);
+export function TaxReturnsList({ incomeReturns, vatReturns }: TaxReturnsListProps) {
+  // Combine and sort returns
+  const returns = useMemo<TaxReturn[]>(() => {
+    return [
+      ...incomeReturns.map((r) => ({ ...r, type: "income" as const })),
+      ...vatReturns.map((r) => ({ ...r, type: "vat" as const })),
+    ].sort((a, b) => {
+      // Sort by year first (most recent first)
+      if (b.taxYear !== a.taxYear) {
+        return b.taxYear - a.taxYear;
       }
-    }
-
-    fetchReturns();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <p className="text-red-600 text-sm">{error}</p>
-      </div>
-    );
-  }
+      // For VAT returns, sort by quarter (most recent first)
+      const aQuarter = a.type === "vat" ? (a as VatReturn & { type: "vat" }).quarter : 4;
+      const bQuarter = b.type === "vat" ? (b as VatReturn & { type: "vat" }).quarter : 4;
+      return bQuarter - aQuarter;
+    });
+  }, [incomeReturns, vatReturns]);
 
   if (returns.length === 0) {
     return (
