@@ -22,13 +22,14 @@ async function request<T>(
   };
 
   const response = await fetch(url, config);
-  const data: ApiResponse<T> = await response.json();
+  const data = await response.json();
 
   if (!response.ok) {
     throw new ApiError(
       data.error || "An error occurred",
       response.status,
-      data.details
+      data.details,
+      data.existingId
     );
   }
 

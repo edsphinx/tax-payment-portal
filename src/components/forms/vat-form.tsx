@@ -53,12 +53,22 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
     submit,
     nextStep,
     prevStep,
+    isFiledPeriod,
+    filedPeriods,
+    loadingReturns,
   } = useVatForm({
     totalSteps,
     onSuccess: () => {},
   });
 
+  // Check if current selection is already filed
+  const currentPeriodFiled = isFiledPeriod(taxYear, quarter);
+
   const handleNext = async () => {
+    // Don't allow proceeding if current period is already filed (from step 2)
+    if (currentStep === 2 && currentPeriodFiled) {
+      return;
+    }
     const isValid = await nextStep();
     if (isValid) {
       onStepChange(currentStep + 1);
@@ -232,11 +242,18 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {quarters.map((q) => (
-                            <SelectItem key={q.value} value={q.value.toString()}>
-                              {q.label}
-                            </SelectItem>
-                          ))}
+                          {quarters.map((q) => {
+                            const isFiled = isFiledPeriod(taxYear, q.value);
+                            return (
+                              <SelectItem
+                                key={q.value}
+                                value={q.value.toString()}
+                                disabled={isFiled}
+                              >
+                                {q.label} {isFiled && "(Already filed)"}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -250,6 +267,33 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
                     {format(quarterDates.start, "MMMM d, yyyy")} - {format(quarterDates.end, "MMMM d, yyyy")}
                   </p>
                 </div>
+
+                {currentPeriodFiled && (
+                  <div className="bg-red-100 border-2 border-red-500 rounded-lg p-4 animate-pulse">
+                    <div className="flex items-center gap-3 text-red-700">
+                      <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-bold text-lg">This period has already been filed!</span>
+                    </div>
+                    <p className="text-red-600 mt-2 ml-9">
+                      You cannot file again for Q{quarter} {taxYear}. Please select a different period.
+                    </p>
+                  </div>
+                )}
+
+                {filedPeriods.length > 0 && (
+                  <div className="text-sm text-gray-500">
+                    <p className="font-medium mb-1">Already filed periods:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {filedPeriods.map((p) => (
+                        <span key={`${p.year}-${p.quarter}`} className="px-2 py-1 bg-gray-100 rounded text-xs">
+                          Q{p.quarter} {p.year}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </>
           )}
@@ -419,7 +463,11 @@ export function VatForm({ currentStep, onStepChange, totalSteps }: VatFormProps)
             </Button>
 
             {currentStep < totalSteps ? (
-              <Button type="button" onClick={handleNext}>
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={currentStep === 2 && currentPeriodFiled}
+              >
                 Continue
               </Button>
             ) : (

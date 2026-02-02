@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { incomeTaxApi } from "@/lib/api";
 import { calculateIncomeTax, getCurrentTaxYear } from "@/lib/tax-calculations";
-import type { IncomeTaxFormData, IncomeTaxCalculation } from "@/types";
+import type { IncomeTaxFormData, IncomeTaxCalculation, IncomeTaxReturn } from "@/types";
+import { ApiError } from "@/types";
 
 // Validation schema
 const incomeTaxSchema = z.object({
@@ -83,6 +84,37 @@ export function useIncomeTaxForm(options: UseIncomeTaxFormOptions = {}) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [returnId, setReturnId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [existingReturns, setExistingReturns] = useState<IncomeTaxReturn[]>([]);
+  const [loadingReturns, setLoadingReturns] = useState(true);
+
+  // Fetch existing returns on mount
+  useEffect(() => {
+    async function fetchExistingReturns() {
+      try {
+        const returns = await incomeTaxApi.getAll();
+        setExistingReturns(returns);
+      } catch (err) {
+        console.error("Error fetching existing returns:", err);
+      } finally {
+        setLoadingReturns(false);
+      }
+    }
+    fetchExistingReturns();
+  }, []);
+
+  // Check if a year already has a submitted return
+  const isFiledYear = useCallback((year: number) => {
+    return existingReturns.some(
+      (r) => r.taxYear === year && r.status !== "DRAFT"
+    );
+  }, [existingReturns]);
+
+  // Get filed years for display
+  const filedYears = useMemo(() => {
+    return existingReturns
+      .filter((r) => r.status !== "DRAFT")
+      .map((r) => r.taxYear);
+  }, [existingReturns]);
 
   const form = useForm<IncomeTaxFormData>({
     resolver: zodResolver(incomeTaxSchema),
@@ -94,6 +126,7 @@ export function useIncomeTaxForm(options: UseIncomeTaxFormOptions = {}) {
   const grossIncome = watch("grossIncome") || 0;
   const entityTaxCredits = watch("entityTaxCredits") || 0;
   const otherCredits = watch("otherCredits") || 0;
+  const taxYear = watch("taxYear");
 
   // Memoized tax calculation
   const taxCalculation: IncomeTaxCalculation = useMemo(
@@ -142,26 +175,47 @@ export function useIncomeTaxForm(options: UseIncomeTaxFormOptions = {}) {
     setError(null);
 
     try {
-      // Create the return
-      const created = await incomeTaxApi.create({
-        taxYear: data.taxYear,
-        grossIncome: data.grossIncome,
-        entityTaxCredits: data.entityTaxCredits,
-        otherCredits: data.otherCredits,
-        incomeSources: data.incomeSources,
-        preparerName: data.useTaxPreparer ? data.preparerName : undefined,
-        preparerEmail: data.useTaxPreparer ? data.preparerEmail : undefined,
-        preparerPhone: data.useTaxPreparer ? data.preparerPhone : undefined,
-      });
+      let taxReturnId: string;
+
+      try {
+        // Try to create a new return
+        const created = await incomeTaxApi.create({
+          taxYear: data.taxYear,
+          grossIncome: data.grossIncome,
+          entityTaxCredits: data.entityTaxCredits,
+          otherCredits: data.otherCredits,
+          incomeSources: data.incomeSources,
+          preparerName: data.useTaxPreparer ? data.preparerName : undefined,
+          preparerEmail: data.useTaxPreparer ? data.preparerEmail : undefined,
+          preparerPhone: data.useTaxPreparer ? data.preparerPhone : undefined,
+        });
+        taxReturnId = created.id;
+      } catch (createError) {
+        // If return already exists (409), update it instead
+        if (createError instanceof ApiError && createError.status === 409 && createError.existingId) {
+          await incomeTaxApi.update(createError.existingId, {
+            grossIncome: data.grossIncome,
+            entityTaxCredits: data.entityTaxCredits,
+            otherCredits: data.otherCredits,
+            incomeSources: data.incomeSources,
+            preparerName: data.useTaxPreparer ? data.preparerName : undefined,
+            preparerEmail: data.useTaxPreparer ? data.preparerEmail : undefined,
+            preparerPhone: data.useTaxPreparer ? data.preparerPhone : undefined,
+          });
+          taxReturnId = createError.existingId;
+        } else {
+          throw createError;
+        }
+      }
 
       // Submit with signature
       if (data.signatureData) {
-        await incomeTaxApi.submit(created.id, data.signatureData);
+        await incomeTaxApi.submit(taxReturnId, data.signatureData);
       }
 
-      setReturnId(created.id);
+      setReturnId(taxReturnId);
       setIsSubmitted(true);
-      onSuccess?.(created.id);
+      onSuccess?.(taxReturnId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -187,8 +241,13 @@ export function useIncomeTaxForm(options: UseIncomeTaxFormOptions = {}) {
     isSubmitted,
     returnId,
     error,
+    taxYear,
+    loadingReturns,
     // Calculations
     taxCalculation,
+    // Filed years
+    filedYears,
+    isFiledYear,
     // Actions
     nextStep,
     prevStep,

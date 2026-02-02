@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { vatApi } from "@/lib/api";
 import { calculateVat, getCurrentQuarter } from "@/lib/tax-calculations";
-import type { VatFormData, VatCalculation } from "@/types";
+import type { VatFormData, VatCalculation, VatReturn } from "@/types";
+import { ApiError } from "@/types";
 
 // Validation schema
 const vatSchema = z.object({
@@ -57,6 +58,37 @@ export function useVatForm(options: UseVatFormOptions = {}) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [returnId, setReturnId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [existingReturns, setExistingReturns] = useState<VatReturn[]>([]);
+  const [loadingReturns, setLoadingReturns] = useState(true);
+
+  // Fetch existing returns on mount
+  useEffect(() => {
+    async function fetchExistingReturns() {
+      try {
+        const returns = await vatApi.getAll();
+        setExistingReturns(returns);
+      } catch (err) {
+        console.error("Error fetching existing returns:", err);
+      } finally {
+        setLoadingReturns(false);
+      }
+    }
+    fetchExistingReturns();
+  }, []);
+
+  // Check if a period already has a submitted return
+  const isFiledPeriod = useCallback((year: number, q: number) => {
+    return existingReturns.some(
+      (r) => r.taxYear === year && r.quarter === q && r.status !== "DRAFT"
+    );
+  }, [existingReturns]);
+
+  // Get filed periods for display
+  const filedPeriods = useMemo(() => {
+    return existingReturns
+      .filter((r) => r.status !== "DRAFT")
+      .map((r) => ({ year: r.taxYear, quarter: r.quarter }));
+  }, [existingReturns]);
 
   const form = useForm<VatFormData>({
     resolver: zodResolver(vatSchema),
@@ -116,23 +148,40 @@ export function useVatForm(options: UseVatFormOptions = {}) {
     setError(null);
 
     try {
-      // Create the return
-      const created = await vatApi.create({
-        taxYear: data.taxYear,
-        quarter: data.quarter,
-        totalRetailSales: data.totalRetailSales,
-        previousCredits: data.previousCredits,
-        salesBreakdown: data.salesBreakdown,
-      });
+      let vatReturnId: string;
+
+      try {
+        // Try to create a new return
+        const created = await vatApi.create({
+          taxYear: data.taxYear,
+          quarter: data.quarter,
+          totalRetailSales: data.totalRetailSales,
+          previousCredits: data.previousCredits,
+          salesBreakdown: data.salesBreakdown,
+        });
+        vatReturnId = created.id;
+      } catch (createError) {
+        // If return already exists (409), update it instead
+        if (createError instanceof ApiError && createError.status === 409 && createError.existingId) {
+          await vatApi.update(createError.existingId, {
+            totalRetailSales: data.totalRetailSales,
+            previousCredits: data.previousCredits,
+            salesBreakdown: data.salesBreakdown,
+          });
+          vatReturnId = createError.existingId;
+        } else {
+          throw createError;
+        }
+      }
 
       // Submit with signature
       if (data.signatureData) {
-        await vatApi.submit(created.id, data.signatureData);
+        await vatApi.submit(vatReturnId, data.signatureData);
       }
 
-      setReturnId(created.id);
+      setReturnId(vatReturnId);
       setIsSubmitted(true);
-      onSuccess?.(created.id);
+      onSuccess?.(vatReturnId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -160,8 +209,12 @@ export function useVatForm(options: UseVatFormOptions = {}) {
     error,
     taxYear,
     quarter,
+    loadingReturns,
     // Calculations
     vatCalculation,
+    // Filed periods
+    filedPeriods,
+    isFiledPeriod,
     // Actions
     nextStep,
     prevStep,
